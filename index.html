@@ -207,6 +207,39 @@ body.wl-mode .topnav{display:none}
 .ai-note{display:flex;flex-direction:column;gap:6px}.ai-note textarea{width:100%;min-width:min(420px,76vw)}
 .ai-snap{border-color:#c7d2fe;color:#4338ca}
 @media (max-width:760px){.ai-bar .btn{flex:1 1 auto;justify-content:center}}
+/* Import & analyze */
+.imp-src{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.imp-h{margin:0 0 6px;font-size:17px;display:flex;align-items:center;gap:8px}
+.imp-browse{margin-top:10px;border:1px solid var(--bd);border-radius:10px;max-height:260px;overflow:auto}
+.imp-bpath{padding:8px 10px;font-size:13px;color:var(--mut);background:#f8fafc;border-bottom:1px solid var(--bd);position:sticky;top:0}
+.imp-f{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--bd);background:#fff;padding:9px 10px;font:inherit;cursor:pointer}.imp-f:hover{background:var(--accl)}
+.imp-top{margin-bottom:12px}.imp-sum{font-size:15px;margin-bottom:6px}.imp-tools{margin-top:8px;align-items:center}.imp-count{margin-left:auto;font-size:14px;color:var(--mut)}
+.imp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.imp-th{position:relative;display:block;border:2px solid var(--bd);border-radius:10px;overflow:hidden;background:#eef1f5;aspect-ratio:1;cursor:pointer}
+.imp-th.on{border-color:var(--acc)}.imp-th.bad{opacity:.75;cursor:default;border-style:dashed}
+.imp-th img{width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:1}
+.imp-th input{position:absolute;top:6px;left:6px;z-index:3;width:20px;height:20px}
+.imp-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-weight:700;font-size:13px}
+.imp-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(15,23,42,.62);color:#fff;font-size:11px;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imp-bad{position:absolute;left:0;right:0;top:30px;z-index:2;background:#fff7ed;color:#9a3412;font-size:11px;padding:4px 6px;line-height:1.25}
+.imp-done{position:absolute;right:6px;top:6px;z-index:2;background:var(--ok);color:#fff;font-size:11px;border-radius:6px;padding:1px 6px}
+.imp-go{margin-bottom:12px}.imp-warn{font-size:13.5px}.imp-conc{display:inline-flex;align-items:center;gap:6px;font-size:14px}.imp-conc select{width:auto}
+.imp-prog{height:12px;margin:10px 0}.imp-prog i{display:block;height:100%;background:var(--acc);border-radius:6px;transition:width .3s}
+.imp-prog-h{display:flex;gap:12px;align-items:center}
+.imp-mini{display:flex;flex-direction:column;gap:6px;margin-top:12px}.imp-mrow{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:6px}
+.imp-mrow img{width:48px;height:48px;object-fit:cover;border-radius:6px}.imp-mrow small{display:block;color:var(--mut)}
+.imp-opts{display:flex;flex-direction:column;gap:6px;margin:6px 0}.imp-opts .chk{display:flex;gap:8px;align-items:flex-start;font-size:14.5px}
+.imp-rev{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.imp-row{padding:10px 12px}.imp-row.off{opacity:.55}.imp-row.low{border-left:4px solid var(--warn)}
+.imp-rh{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-size:13.5px}.imp-rh label{display:inline-flex;gap:5px;align-items:center;font-weight:600}
+.imp-lowb{background:#fef3c7;color:#92400e}
+.imp-rb{display:grid;grid-template-columns:150px 1fr;gap:12px}.imp-rph{display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}.imp-rph img{width:70px;height:70px;object-fit:cover;border-radius:8px}.imp-rph img:only-of-type{width:150px;height:112px}.imp-rph small{width:100%;color:var(--mut);font-size:11px;word-break:break-all}
+.imp-rf{display:flex;flex-direction:column;gap:6px}.imp-cls{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.imp-sticky{position:sticky;bottom:8px;z-index:5;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+@media (max-width:760px){.imp-rb{grid-template-columns:1fr}.imp-cls{grid-template-columns:1fr}.imp-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}.imp-count{margin-left:0}}
+.imp-opts input[type=checkbox],.imp-rh input[type=checkbox],.imp-th input[type=checkbox]{width:18px;height:18px;flex:none;margin:2px 0 0}
+.imp-opts .help{display:inline;margin:0}
+@media (max-width:760px){.imp-sticky{bottom:calc(66px + env(safe-area-inset-bottom,0px))}}
 
 </style>
 </head>
@@ -917,7 +950,7 @@ function viewProject(id){const p=byId('projects',id);if(!p)return notFound();
 function viewAudit(id,params){const a=byId('audits',id);if(!a)return notFound();const p=byId('projects',a.projectId);const items=auditItems(id);const tab=params.tab||'issues';const cls=S.checklists.filter(c=>c.auditId===id);
  return`${crumbs([['Projects','#/'],[p.name,'#/project/'+p.id],[a.title]])}
  <div class="page-head"><h1>${esc(a.title)}<span class="sub">${fmtDate(a.date)}${a.inspector?' · Inspector: '+esc(a.inspector):''}${a.weather?' · '+esc(a.weather):''}</span></h1>
- <div class="actions"><button class="btn" data-act="edit-audit" data-id="${id}">${ic('edit')}<span class="lbl">Edit</span></button><button class="btn" data-act="report" data-type="audit" data-id="${id}">${ic('file')}<span class="lbl">Report</span></button><button class="btn danger" data-act="del-audit" data-id="${id}">${ic('trash')}</button>${aiSnapHTML(a)}<button class="btn primary" data-act="new-item" data-id="${id}">${ic('plus')} Add issue</button></div></div>
+ <div class="actions"><button class="btn" data-act="edit-audit" data-id="${id}">${ic('edit')}<span class="lbl">Edit</span></button><button class="btn" data-act="report" data-type="audit" data-id="${id}">${ic('file')}<span class="lbl">Report</span></button><button class="btn danger" data-act="del-audit" data-id="${id}">${ic('trash')}</button>${impBtnHTML(a)}${aiSnapHTML(a)}<button class="btn primary" data-act="new-item" data-id="${id}">${ic('plus')} Add issue</button></div></div>
  ${a.notes?`<div class="card pad small" style="white-space:pre-wrap">${esc(a.notes)}</div>`:''}
  ${statsHTML(items,'a-'+id)}${tradeHTML(items,'a-'+id)}
  <div class="tabs"><a href="#/audit/${id}" class="${tab==='issues'?'on':''}">Issues (${items.length})</a><a href="#/audit/${id}?tab=checklists" class="${tab==='checklists'?'on':''}">Checklists (${cls.length})</a></div>
@@ -933,7 +966,7 @@ function viewItem(id){const i=byId('items',id);if(!i)return notFound();const a=b
  const sibs=auditItems(a.id).sort((x,y)=>x.number-y.number),ix=sibs.findIndex(x=>x.id===id),prev=sibs[ix-1],next=sibs[ix+1];
  const dr=i.pin&&byId('drawings',i.pin.drawingId);const drs=S.drawings.filter(d=>d.projectId===p.id);
  return`${crumbs([['Projects','#/'],[p.name,'#/project/'+p.id],[a.title,'#/audit/'+a.id],['Issue #'+i.number]])}
- <div class="page-head"><h1><span class="num">#${i.number}</span>${esc(i.title||'Untitled issue')}<span class="sub">Created ${fmtDT(i.createdAt)}${i.createdBy?' by '+esc(i.createdBy):''} · Last edited ${fmtDT(i.updatedAt)}${i.updatedBy?' by <b>'+esc(i.updatedBy)+'</b>':''}${i.closedAt&&i.status==='Closed'?' · Closed '+fmtDT(i.closedAt):''}</span></h1>
+ <div class="page-head"><h1><span class="num">#${i.number}</span>${esc(i.title||'Untitled issue')}<span class="sub">Created ${fmtDT(i.createdAt)}${i.createdBy?' by '+esc(i.createdBy):''} · Last edited ${fmtDT(i.updatedAt)}${i.updatedBy?' by <b>'+esc(i.updatedBy)+'</b>':''}${i.closedAt&&i.status==='Closed'?' · Closed '+fmtDT(i.closedAt):''}${(i.sourceFiles||[]).length?' · Imported from '+esc(i.sourceFiles.slice(0,3).join(', ')+(i.sourceFiles.length>3?' +'+(i.sourceFiles.length-3):'')):''}</span></h1>
  <div class="actions">${prev?`<a class="btn" href="#/item/${prev.id}" title="Previous">‹</a>`:''}${next?`<a class="btn" href="#/item/${next.id}" title="Next">›</a>`:''}<button class="btn" data-act="dup-item" data-id="${id}">Duplicate</button><button class="btn danger" data-act="del-item" data-id="${id}">${ic('trash')}</button><button class="btn primary" data-act="new-item" data-id="${a.id}">${ic('plus')} Next issue</button></div></div>
  <div class="two-col"><div class="card pad">${aiBarHTML(i)}<form class="form-grid" onsubmit="return false" id="item-form" data-id="${i.id}">
  <label class="full"><span>Title *</span><input name="title" data-change="item-field" value="${esc(i.title)}" placeholder="e.g. Cracked floor tile at entrance"></label>
@@ -988,7 +1021,7 @@ const notFound=()=>emptyHTML('Not found','This record no longer exists.',`<a cla
 let lastRoute='';
 function parseHash(){const h=location.hash.replace(/^#\/?/,'');const [path,qs]=h.split('?');return{parts:path.split('/').filter(Boolean),params:Object.fromEntries(new URLSearchParams(qs||''))}}
 function render(){const {parts,params}=parseHash();UI.after=[];UI.list=null;let html;
- try{switch(parts[0]){case 'project':html=viewProject(parts[1]);break;case 'audit':html=viewAudit(parts[1],params);break;case 'item':html=viewItem(parts[1]);break;case 'drawing':html=viewDrawing(parts[1],params);break;case 'templates':html=viewTemplates();break;case 'settings':html=viewSettings();break;case 'dbx-admin':html=viewDbxAdmin();break;default:html=Welcome.wants()?viewWelcome():viewHome()}}
+ try{switch(parts[0]){case 'project':html=viewProject(parts[1]);break;case 'audit':html=viewAudit(parts[1],params);break;case 'item':html=viewItem(parts[1]);break;case 'drawing':html=viewDrawing(parts[1],params);break;case 'import':html=viewImport(parts[1]);break;case 'templates':html=viewTemplates();break;case 'settings':html=viewSettings();break;case 'dbx-admin':html=viewDbxAdmin();break;default:html=Welcome.wants()?viewWelcome():viewHome()}}
  catch(e){console.error(e);html=emptyHTML('Something went wrong',e.message)}
  const app=$('#app'),key=parts.join('/'),y=scrollY;app.innerHTML=html;scrollTo(0,key===lastRoute?y:0);lastRoute=key;
  $$('.topnav a').forEach(a=>a.classList.toggle('on',a.dataset.nav===(parts[0]==='templates'||parts[0]==='settings'?parts[0]:parts[0]==='dbx-admin'?'settings':'projects')));
@@ -1336,8 +1369,10 @@ const Dbx={loc:null,
   if(!r)return;const done=busy('Connecting to Dropbox…');try{await this.exchange(r.code.trim(),v,null)}catch(e){Welcome.fail('Dropbox connection failed: '+e.message)||alertBox('Dropbox connection failed: '+e.message)}finally{done()}},
  async handleRedirect(){const q=new URLSearchParams(location.search);if(!q.has('code')&&!q.has('error'))return false;let saved=null;try{saved=JSON.parse(localStorage.getItem('sap.dbx.pkce')||'null')}catch(e){}localStorage.removeItem('sap.dbx.pkce');
   history.replaceState(null,'',location.pathname+(saved&&saved.from||'#/settings'));
+  if(saved&&saved.grant&&(q.get('error')||saved.state!==q.get('state'))){alertBox(q.get('error')==='access_denied'?'Dropbox access was not granted. You can try again from the import page.':'Dropbox could not grant the extra permission ('+(q.get('error_description')||q.get('error')||'state mismatch')+'). Your administrator must enable “'+saved.grant+'” in the Dropbox app console (Permissions tab) first.','Dropbox permission');return true}
   if(q.get('error')){const m=q.get('error')==='access_denied'?'Dropbox sign-in was cancelled. Tap Connect Dropbox to try again.':'Dropbox: '+(q.get('error_description')||q.get('error'));if(!Welcome.fail(m))toast(m,4000);return true}
   if(!saved||saved.state!==q.get('state')){const m='Dropbox sign-in could not be verified. Please try Connect again.';Welcome.fail(m)||alertBox(m);return true}
+  if(saved.grant){const done=busy('Updating Dropbox permissions…');try{await this.exchangeGrant(q.get('code'),saved.v,saved.ru,saved.grant)}catch(e){alertBox('Could not update Dropbox permissions: '+e.message,'Dropbox permission')}finally{done()}return true}
   const done=busy('Connecting to Dropbox…');try{await this.exchange(q.get('code'),saved.v,saved.ru)}catch(e){Welcome.fail('Dropbox connection failed: '+e.message)||alertBox('Dropbox connection failed: '+e.message)}finally{done()}return true},
  accountProblem(a){if(!a.team)return`Site Inspection only works with your company Dropbox account. You signed in with a personal Dropbox account${a.email?' ('+a.email+')':''}. Please connect again and sign in with your work account.`;
   if(DROPBOX_TEAM_ID&&a.team.id!==DROPBOX_TEAM_ID)return`The Dropbox account ${a.email||''} belongs to a different team (“${a.team.name||a.team.id}”). Please sign in with your company Dropbox account.`;
@@ -1346,13 +1381,25 @@ const Dbx={loc:null,
  async exchange(code,verifier,ru){const body=new URLSearchParams({code,grant_type:'authorization_code',code_verifier:verifier,client_id:this.key()});if(ru)body.set('redirect_uri',ru);
   let r;try{r=await fetch(DBX_TOKEN,{method:'POST',body})}catch(e){throw new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.access_token)throw new DbxErr(j.error_description||j.error||('Token request failed ('+r.status+')'),'auth',r.status);
-  this.setTok({v:2,access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+(j.expires_in||14400)*1000-60000,account_id:j.account_id});
+  this.setTok({v:2,access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+(j.expires_in||14400)*1000-60000,account_id:j.account_id,scope:j.scope||''});
   let a;try{a=await this.rpc('users/get_current_account')}catch(e){this.setTok(null);throw e}
   const bad=this.accountProblem(a);if(bad){await this.revoke();this.setTok(null);localStorage.setItem('sap.dbx.reauth','1');if(Welcome.fail(bad))return;render();alertBox(bad,'Company account required');return}
   const t=this.tok();t.account={name:a.name&&a.name.display_name,email:a.email,team:{id:a.team.id,name:a.team.name}};this.setTok(t);
   this.loc=null;localStorage.removeItem('sap.dbx.loc');await Sync.resetMeta();Sync.markAllDirty();Sync.setState('idle');const wf=Welcome.flow();if(wf)Welcome.set({stage:'connecting'});toast('Dropbox connected');render();
   try{await this.ensureFolder()}catch(e){if(e.kind==='noaccess'){Sync.setState('noaccess',e.message);if(wf){Welcome.set({stage:'noaccess',msg:e.message});render();return}render();alertBox(e.message,'Company folder');return}}
   if(wf){Welcome.set({stage:'ok'});render()}Sync.now(true)},
+ /* Incremental authorization: ask for one extra scope (e.g. sharing.read for shared-link import) on top of the granted ones,
+    without resetting sync. The scope must be enabled in the Dropbox app console (Permissions) or Dropbox refuses it. */
+ async grant(scope,from){const key=this.key(),ru=this.redirectUri();if(!key||!ru)return alertBox('This needs the hosted version of the app (not a local file).','Dropbox permission');
+  const{v,ch,m}=await this.pkce();const state=b64url(crypto.getRandomValues(new Uint8Array(16)));const u=new URL(DBX_AUTH);
+  Object.entries({client_id:key,response_type:'code',code_challenge:ch,code_challenge_method:m,token_access_type:'offline',scope,include_granted_scopes:'user',state,redirect_uri:ru}).forEach(([k,x])=>u.searchParams.set(k,x));
+  localStorage.setItem('sap.dbx.pkce',JSON.stringify({v,state,ru,t:Date.now(),from:from||null,grant:scope}));location.href=u.toString()},
+ hasScope(s){const t=this.tok();return!!(t&&(' '+(t.scope||'')+' ').includes(' '+s+' '))},
+ async exchangeGrant(code,verifier,ru,scope){const t=this.tok();if(!t)throw new DbxErr('Dropbox is not connected','auth');const body=new URLSearchParams({code,grant_type:'authorization_code',code_verifier:verifier,client_id:this.key()});if(ru)body.set('redirect_uri',ru);
+  let r;try{r=await fetch(DBX_TOKEN,{method:'POST',body})}catch(e){throw new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.access_token)throw new DbxErr(j.error_description||j.error||('Token request failed ('+r.status+')'),'auth',r.status);
+  if(t.account_id&&j.account_id&&j.account_id!==t.account_id){try{await fetch(DBX_API+'auth/token/revoke',{method:'POST',headers:{Authorization:'Bearer '+j.access_token}})}catch(e){}throw new DbxErr('You signed in with a different Dropbox account. Use the same company account you connected with.','auth')}
+  this.setTok({...t,access_token:j.access_token,refresh_token:j.refresh_token||t.refresh_token,expires_at:Date.now()+(j.expires_in||14400)*1000-60000,scope:j.scope||((t.scope?t.scope+' ':'')+scope)});toast('Dropbox permission granted ('+scope+')',3000)},
  async revoke(){try{const t=this.tok();if(t&&t.access_token)await fetch(DBX_API+'auth/token/revoke',{method:'POST',headers:{Authorization:'Bearer '+t.access_token}})}catch(e){}},
  async disconnect(){if(!await confirmBox('Disconnect Dropbox on this device? Your local data and the company folder are kept.','Disconnect'))return;
   await this.revoke();this.setTok(null);this.loc=null;localStorage.removeItem('sap.dbx.loc');await Sync.resetMeta();Sync.setState('idle');toast('Dropbox disconnected');render()},
@@ -1510,7 +1557,7 @@ function viewDbxAdmin(){const t=Dbx.tok(),loc=Dbx.loc||JSON.parse(localStorage.g
  ${row('Sync state',code(Sync.state+(Sync.msg?' – '+Sync.msg:'')))}${row('Last sync',code(SM&&SM.lastSync?fmtDT(SM.lastSync):'never'))}${row('Pending bundles',code(SM?Object.keys(SM.dirty):[]))}${row('Known remote files',code(SM?Object.keys(SM.revs).length+' data, '+Object.keys(SM.photoRev).length+' photos':''))}${row('Tombstones',code(TOMBS.size))}</dl>
  <div class="form-grid" style="margin-top:14px"><label><span>Override App key on this device (leave empty to use the built-in key)</span><input data-change="dbx-key" value="${esc(lk)}" autocomplete="off" spellcheck="false"></label></div>
  <div class="actions" style="margin-top:14px">${Dbx.connected()?`<button class="btn primary" data-act="dbx-sync">Sync now</button><button class="btn" data-act="dbx-recheck">Re-check folder</button><button class="btn" data-act="dbx-resync">Full re-sync</button><button class="btn" data-act="dbx-backup">Upload full backup</button><button class="btn danger" data-act="dbx-disconnect">Disconnect</button>`:`<button class="btn primary" data-act="dbx-connect">Connect (redirect)</button><button class="btn" data-act="dbx-connect-code">Connect with code</button>`}</div>
- <p class="help">Scopes required: account_info.read, files.metadata.read, files.metadata.write, files.content.read, files.content.write (no team scopes). App type: Scoped access, Full Dropbox.</p></div>`}
+ <p class="help">Scopes required: account_info.read, files.metadata.read, files.metadata.write, files.content.read, files.content.write (no team scopes). Optional: sharing.read – only for “Import photos” from Dropbox shared links (requested separately when first used). App type: Scoped access, Full Dropbox.</p></div>`}
 
 /* ===== First-run welcome / onboarding (shown on the home route while Dropbox is not connected) =====
  State: sessionStorage sap.welcome = {stage:'connecting'|'ok'|'noaccess'|'error', msg}; localStorage sap.welcome.skip = '1' after "Continue offline". */
@@ -1577,7 +1624,8 @@ const AI={
    const j=await r.json().catch(()=>({}));if(r.ok)return j;
    if(r.status===401&&a===0){try{tok=await Dbx.token(true);continue}catch(e){}}
    const kind={401:'auth',403:'forbidden',413:'too_large',415:'bad_input',400:'bad_input',429:'rate'}[r.status]||'server';
-   throw new AIErr(kind,j.message||{auth:'Not authorized. Reconnect Dropbox and try again.',forbidden:'The AI assistant is only available to company accounts.',rate:'AI limit reached. Please try again later.',too_large:'That file is too large for the AI assistant.'}[kind]||`The AI service is unavailable right now (${r.status}). Please try again later.`)}},
+   const ra=parseFloat(r.headers.get('Retry-After'));
+   throw Object.assign(new AIErr(kind,j.message||{auth:'Not authorized. Reconnect Dropbox and try again.',forbidden:'The AI assistant is only available to company accounts.',rate:'AI limit reached. Please try again later.',too_large:'That file is too large for the AI assistant.'}[kind]||`The AI service is unavailable right now (${r.status}). Please try again later.`),{status:r.status,code:j.error||'',retryAfter:isFinite(ra)&&ra>0?ra:0})}},
  error(e){console.warn('AI',e&&e.kind);const title={offline:'You are offline',auth:'Not authorized',forbidden:'Not authorized',rate:'AI limit reached',mic:'Microphone',timeout:'AI assistant',too_large:'Too large'}[e&&e.kind]||'AI assistant';
   return alertBox(e&&e.message||'Something went wrong with the AI assistant.',title)},
  context(it){const a=byId('audits',it.auditId),p=byId('projects',it.projectId);return{location:it.location||'',project:p?p.name:'',inspection:a?a.title:''}},
@@ -1650,6 +1698,240 @@ Object.assign(ACT,{
 Object.assign(CHG,{
  'ai-snap':el=>{const f=el.files&&el.files[0];el.value='';if(f)return AI.snap(el.dataset.id,f)},
  'ai-auto':el=>{localStorage.setItem('sap.ai.auto',el.checked?'1':'0');toast(el.checked?'Auto-suggest on':'Auto-suggest off',1200)}});
+
+/* ===== Import & analyze photos: device (files / folder), Dropbox path, Dropbox shared link → review → draft issues =====
+ State lives in memory (IMP) for one inspection at a time. Files are referenced (File handles / Dropbox paths), thumbnails are
+ generated lazily when visible, full images are decoded one at a time (1600px JPEG kept for the issue, 1024px sent to the AI). */
+const IMP_CAP=200,IMP_SCAN_MAX=5000,IMP_IMG=/\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/i,IMP_HEIC=/\.(heic|heif)$/i;
+const IMP_HEIC_NOTE="HEIC photo – this browser can't read it, so it will be skipped. Export it as JPEG (or use Safari on iPhone/Mac).";
+const IMP_LINK_RE=/^https:\/\/(www\.)?dropbox\.com\/(s|sh|scl\/fi|scl\/fo)\/\S+$/i;
+let IMP=null,impHeicOK=null;
+const impIsIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const impDirOK=()=>'webkitdirectory' in document.createElement('input')&&!impIsIOS();
+const impBatch=()=>IMP?IMP.all.slice(IMP.off,IMP.off+IMP_CAP):[];
+const impP=id=>IMP&&IMP.all.find(p=>p.id===id);
+const impSel=()=>impBatch().filter(p=>p.sel&&!p.bad);
+const impRunning=()=>!!(IMP&&IMP.run&&IMP.run.active);
+function impNew(aid){IMP={aid,step:'source',all:[],off:0,label:'',notes:[],conc:1,skipNo:true,group:false,rows:[],run:null,
+ dbx:{space:'team',path:'',rec:false,folders:null,imgs:0,at:null},link:{url:sessionStorage.getItem('sap.imp.link')||'',rec:false}};sessionStorage.removeItem('sap.imp.link');return IMP}
+function impBtnHTML(a){return`<a class="btn" href="#/import/${a.id}">${AI.enabled()?AI_ICON.spark:ic('upload')}<span class="lbl">${AI.enabled()?'Import & analyze':'Import photos'}</span></a>`}
+/* ---------- Dropbox helpers (raw errors so shared-link / scope problems can be explained properly) ---------- */
+async function impErr(r){let j={};try{j=await r.json()}catch(e){}const s=j.error_summary||(typeof j.error==='string'?j.error:'')||('HTTP '+r.status);
+ const e=new Error(s);e.summary=s;e.status=r.status;e.scope=/missing_scope/.test(s)||!!(j.error&&j.error['.tag']==='missing_scope');return e}
+async function impRpc(ep,arg,root){const r=await Dbx.call(DBX_API+ep,{headers:{'Content-Type':'application/json',...(root?Dbx.rootHeader({root}):{})},body:JSON.stringify(arg)});if(!r.ok)throw await impErr(r);return r.json()}
+async function impContent(ep,arg,root){const r=await Dbx.call(DBX_CONTENT+ep,{headers:{'Dropbox-API-Arg':hjson(arg),...(root?Dbx.rootHeader({root}):{})}});if(!r.ok)throw await impErr(r);return r.blob()}
+async function impRoots(){let l=Dbx.loc;if(!l||!l.rootNs){const a=await impRpc('users/get_current_account',null);const ri=a.root_info||{};l={rootNs:ri.root_namespace_id,homeNs:ri.home_namespace_id,teamSpace:!!(ri.root_namespace_id&&ri.root_namespace_id!==ri.home_namespace_id)}}
+ IMP.dbx.teamSpace=!!l.teamSpace;return{teamSpace:!!l.teamSpace,team:l.teamSpace?String(l.rootNs):null}}
+const impPath=s=>{s=String(s||'').trim().replace(/\\/g,'/').replace(/\/+/g,'/').replace(/\/$/,'');return s&&!s.startsWith('/')?'/'+s:s};
+async function impList(arg,root,cap=IMP_SCAN_MAX){let r=await impRpc('files/list_folder',{include_deleted:false,limit:2000,...arg},root),es=r.entries,trunc=false;
+ while(r.has_more){if(es.length>=cap*4){trunc=true;break}r=await impRpc('files/list_folder/continue',{cursor:r.cursor},root);es=es.concat(r.entries)}return{es,trunc}}
+function impLinkMsg(e){const s=e.summary||e.message||'';
+ if(e.kind==='offline')return"You're offline. Connect to the internet and try again.";
+ if(/shared_link_not_found|not_found/.test(s))return"This shared link doesn't exist any more or was mistyped. Check the link and try again.";
+ if(/password|shared_link_access_denied|access_denied|no_permission|email_not_verified/.test(s))return"You don't have access to this shared link. Ask the owner to share it with your company Dropbox account, or to set it to “anyone with the link can view” (password-protected links are not supported).";
+ if(/unsupported_link_type|unsupported/.test(s))return'This kind of Dropbox link is not supported. Use a link to a folder or a photo.';
+ return'Could not open this shared link ('+s+').'}
+function impScopePrompt(){return modal({title:'Allow shared-link access',body:`<p style="margin:0 0 8px">Importing from a Dropbox <b>shared link</b> needs one extra Dropbox permission: <code>sharing.read</code> (read-only access to links shared with you).</p><p class="help" style="margin:0">Tap <b>Allow</b> and confirm in Dropbox. If Dropbox shows an error, your administrator must first tick <b>sharing.read</b> in the Dropbox app console → Permissions.</p>`,
+ buttons:[{label:'Cancel',value:null},{label:'Allow',value:true,cls:'primary'}]}).then(v=>{if(!v)return;sessionStorage.setItem('sap.imp.link',IMP.link.url);Dbx.grant('sharing.read','#/import/'+IMP.aid)})}
+/* ---------- Loading sources ---------- */
+function impSetAll(list,label,kind,notes=[]){const imgs=list.sort((a,b)=>a.rel.localeCompare(b.rel,undefined,{numeric:true}));
+ IMP.all=imgs.map((x,i)=>({id:'p'+i+'_'+uid(),sel:true,thumb:null,bad:null,state:'',res:null,err:null,prep:null,heic:IMP_HEIC.test(x.name)||/hei[cf]/i.test(x.type||''),...x}));
+ IMP.off=0;IMP.label=label;IMP.kind=kind;IMP.notes=notes;IMP.rows=[];IMP.step=IMP.all.length?'pick':'source';
+ if(!IMP.all.length)alertBox('No photos were found in '+label+'. Supported: JPEG, PNG, WebP, HEIC.','Import photos');else if(kind==='device')impHeicCheck();impPaint()}
+async function impDevice(files){const all=[...files];const imgs=all.filter(f=>/^image\//.test(f.type)||IMP_IMG.test(f.name));const skipped=all.length-imgs.length;
+ const dir=imgs[0]&&imgs[0].webkitRelativePath?imgs[0].webkitRelativePath.split('/')[0]:'';
+ impSetAll(imgs.map(f=>({name:f.name,rel:f.webkitRelativePath||f.name,size:f.size,type:f.type,src:{t:'file',f}})),dir?'folder “'+dir+'”':'the selected photos','device',skipped?[`${skipped} non-image file${skipped>1?'s':''} ignored.`]:[])}
+async function impHeicCheck(){const h=IMP.all.filter(p=>p.heic&&p.src.t==='file');if(!h.length)return;if(impHeicOK===null){try{const b=await createImageBitmap(h[0].src.f);b.close&&b.close();impHeicOK=true}catch(e){try{await impDecode(h[0].src.f);impHeicOK=true}catch(e2){impHeicOK=false}}}
+ if(!impHeicOK){h.forEach(p=>{p.bad=IMP_HEIC_NOTE;p.sel=false});impPaint()}}
+async function impDbxBrowse(path){const d=IMP.dbx;d.path=impPath(path);d.loading=true;impPaint();
+ try{const R=await impRoots();const root=d.space==='team'?R.team:null;const{es}=await impList({path:d.path,recursive:false},root);
+  d.folders=es.filter(e=>e['.tag']==='folder').map(e=>({name:e.name,path:e.path_display})).sort((a,b)=>a.name.localeCompare(b.name));d.imgs=es.filter(e=>e['.tag']==='file'&&IMP_IMG.test(e.name)).length;d.at=d.path}
+ catch(e){d.folders=null;alertBox(/not_found/.test(e.summary||'')?'That folder was not found in '+(d.space==='team'?'the team space':'your files')+'.':e.kind==='offline'?"You're offline.":'Could not open the folder: '+(e.summary||e.message),'Dropbox')}
+ finally{d.loading=false;impPaint()}}
+async function impDbxLoad(){const d=IMP.dbx;const inp=$('#imp-dbx-path');if(inp)d.path=impPath(inp.value);const done=busy('Listing photos in Dropbox…');
+ try{const R=await impRoots();const order=R.teamSpace?(d.space==='team'?[['team',R.team],['home',null]]:[['home',null],['team',R.team]]):[['home',null]];let res=null,used=null,last;
+  for(const [nm,root] of order){try{res=await impList({path:d.path,recursive:d.rec},root);used=[nm,root];break}catch(e){last=e;if(!/not_found/.test(e.summary||''))throw e}}
+  if(!res)throw last;d.space=used[0];const files=res.es.filter(e=>e['.tag']==='file'&&IMP_IMG.test(e.name));const notes=res.trunc?['This folder is very large – only the first part was scanned. Choose a subfolder for the rest.']:[];
+  done();impSetAll(files.map(e=>({name:e.name,rel:e.path_display,size:e.size,src:{t:'path',path:e.path_lower||e.path_display,root:used[1]}})),'Dropbox '+(R.teamSpace?(used[0]==='team'?'team space ':'(my files) '):'')+'“'+(d.path||'/')+'”'+(d.rec?' incl. subfolders':''),'dbx',notes)}
+ catch(e){done();alertBox(/not_found/.test(e.summary||'')?'Folder “'+(d.path||'/')+'” was not found in your Dropbox'+(e.status?'':'')+'. Check the path (it is case-insensitive) or use Browse.':e.kind==='offline'?"You're offline.":'Could not list the folder: '+(e.summary||e.message),'Dropbox')}}
+async function impLinkLoad(){const L=IMP.link;const inp=$('#imp-link');if(inp)L.url=inp.value.trim();const url=L.url;
+ if(!IMP_LINK_RE.test(url))return alertBox('Paste a Dropbox shared link, e.g. https://www.dropbox.com/scl/fo/… (folder) or …/scl/fi/… (photo).','Shared link');
+ const done=busy('Opening shared link…');
+ try{const m=await impRpc('sharing/get_shared_link_metadata',{url});let items=[],trunc=false;
+  if(m['.tag']==='file'){if(!IMP_IMG.test(m.name))throw Object.assign(new Error('not an image'),{summary:'unsupported'});items=[{name:m.name,rel:m.name,size:m.size,src:{t:'link',url,path:null}}]}
+  else{const q=[''];while(q.length){const rel=q.shift();const{es,trunc:t}=await impList({path:rel,shared_link:{url}},null);trunc=trunc||t;
+    for(const e of es){const p=rel+'/'+e.name;if(e['.tag']==='folder'){if(L.rec)q.push(p)}else if(e['.tag']==='file'&&IMP_IMG.test(e.name))items.push({name:e.name,rel:p,size:e.size,src:{t:'link',url,path:p}})}
+    if(items.length>=IMP_SCAN_MAX){trunc=true;break}}}
+  done();impSetAll(items,'shared '+(m['.tag']==='file'?'photo':'folder')+' “'+(m.name||'link')+'”'+(L.rec&&m['.tag']!=='file'?' incl. subfolders':''),'link',trunc?['Only the first part of this link was scanned.']:[])}
+ catch(e){done();if(e.scope)return impScopePrompt();alertBox(impLinkMsg(e),'Shared link')}}
+/* ---------- Images ---------- */
+function impDecode(blob){const u=URL.createObjectURL(blob);return loadImg(u).finally(()=>setTimeout(()=>URL.revokeObjectURL(u),0))}
+const impThumbArg=(p,size)=>({resource:p.src.t==='link'?{'.tag':'link',url:p.src.url,...(p.src.path?{path:p.src.path}:{})}:{'.tag':'path',path:p.src.path},format:'jpeg',size,mode:'fitone_bestfit'});
+const impDbxThumb=(p,size)=>impContent('files/get_thumbnail_v2',impThumbArg(p,size),p.src.t==='path'?p.src.root:null);
+const impDbxFile=p=>p.src.t==='link'?impContent('sharing/get_shared_link_file',{url:p.src.url,...(p.src.path?{path:p.src.path}:{})},null):impContent('files/download',{path:p.src.path},p.src.root);
+function impCanvas(src,max){const w0=src.naturalWidth||src.width,h0=src.naturalHeight||src.height,s=Math.min(1,max/Math.max(w0,h0));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w0*s));c.height=Math.max(1,Math.round(h0*s));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(src,0,0,c.width,c.height);return c}
+/* Full image → 1600px JPEG blob for the issue (+ optional 1024px data URL for the AI). HEIC from Dropbox goes through Dropbox's JPEG thumbnail. */
+async function impPrep(p,withAI){let img;
+ if(!p.prep){if(p.src.t==='file'){try{img=await impDecode(p.src.f)}catch(e){throw new Error(p.heic?IMP_HEIC_NOTE:'This file could not be read as an image.')}}
+  else{let b=null;if(!p.heic){b=await impDbxFile(p);try{img=await impDecode(b)}catch(e){img=null}}b=null;if(!img)img=await impDecode(await impDbxThumb(p,'w2048h1536'))}
+  const c=impCanvas(img,1600);const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));p.prep={blob,w:c.width,h:c.height};if(!withAI)return{prep:p.prep};return{prep:p.prep,ai:impCanvas(c,1024).toDataURL('image/jpeg',0.8)}}
+ if(!withAI)return{prep:p.prep};const i2=await impDecode(p.prep.blob);return{prep:p.prep,ai:impCanvas(i2,1024).toDataURL('image/jpeg',0.8)}}
+/* Lazy thumbnails: only for tiles scrolled into view, max 3 in flight */
+const impTQ={q:[],n:0,io:null};
+function impThumbObserve(){if(impTQ.io)impTQ.io.disconnect();if(!('IntersectionObserver' in window)){$$('.imp-th[data-pid]').forEach(el=>impThumbQueue(el.dataset.pid));return}
+ impTQ.io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){impTQ.io.unobserve(e.target);impThumbQueue(e.target.dataset.pid)}}),{rootMargin:'200px'});
+ $$('.imp-th[data-pid]').forEach(el=>{const p=impP(el.dataset.pid);if(p&&!p.thumb)impTQ.io.observe(el)})}
+function impThumbQueue(id){const p=impP(id);if(!p||p.thumb||p.tq)return;p.tq=1;impTQ.q.push(p);impThumbPump()}
+async function impThumbPump(){while(impTQ.n<3&&impTQ.q.length){const p=impTQ.q.shift();impTQ.n++;impThumb(p).finally(()=>{impTQ.n--;impThumbPump()})}}
+async function impThumb(p){try{if(p.src.t==='file'){let bm;try{bm=await createImageBitmap(p.src.f,{resizeWidth:240,resizeQuality:'low'})}catch(e){bm=await impDecode(p.src.f)}const c=impCanvas(bm,240);bm.close&&bm.close();p.thumb=c.toDataURL('image/jpeg',0.7)}
+  else p.thumb=await blobToDataURL(await impDbxThumb(p,'w256h256'))}
+ catch(e){p.thumb='x';if(p.src.t==='file'){p.bad=p.heic?IMP_HEIC_NOTE:'Not a readable image – will be skipped.';p.sel=false;return impPaint()}}
+ const el=$(`.imp-th[data-pid="${p.id}"]`);if(el){const im=el.querySelector('img');if(im&&p.thumb!=='x'){im.src=p.thumb;im.hidden=false}}}
+/* ---------- Analysis runner (1–2 at a time, pause / cancel, automatic wait on 429 / busy) ---------- */
+const impNoDefect=s=>s&&(s.defectVisible===false||(s.trade==='Other'&&/\bno (visible )?(construction )?(defect|issue|damage)/i.test((s.title||'')+' '+(s.description||''))));
+function impRowFrom(p){const s=p.res||{};const okT=taxTrades().includes(s.trade),okS=okT&&taxSubs(s.trade).includes(s.subcategory);
+ return{id:'r'+uid(),ord:IMP.all.indexOf(p),pids:[p.id],title:s.title||'',desc:s.description||'',trade:okT?s.trade:'',sub:okS?s.subcategory:'',def:okS&&taxDefects(s.trade,s.subcategory).includes(s.defectType)?s.defectType:'',
+  conf:p.res?+s.confidence||0:null,noDef:p.res?impNoDefect(s):false,obs:s.otherObservations||[],err:p.err||null,inc:!p.err,ai:!!p.res}}
+async function impAnalyze(){const ps=impSel();if(!ps.length)return;ps.forEach(p=>{if(p.state!=='done'){p.state='queued';p.err=null}});
+ const R=IMP.run={active:true,paused:false,cancel:false,wait:0,why:'',msg:'',busyN:0,ids:ps.map(p=>p.id),t0:Date.now()};IMP.step='run';impPaint();
+ const a=byId('audits',IMP.aid),pr=a&&byId('projects',a.projectId),ctx={project:pr?pr.name:'',inspection:a?a.title:'',location:''};
+ const gate=async()=>{while(R.paused&&!R.cancel)await sleep(250)};
+ const wait=async(sec,why)=>{R.wait=Date.now()+sec*1000;R.why=why;impPaint();while(Date.now()<R.wait&&!R.cancel){await sleep(250);impTick()}R.wait=0;R.why='';impPaint()};
+ const worker=async()=>{for(;;){if(R.cancel)return;await gate();if(R.cancel)return;if(R.wait){await sleep(250);continue}
+   const p=IMP.all.find(x=>R.ids.includes(x.id)&&x.state==='queued');if(!p)return;p.state='running';impPaint();
+   try{const{ai}=await impPrep(p,true);p.res=await AI.analyze({images:[ai],context:ctx});p.state='done';R.busyN=0}
+   catch(e){if(e instanceof AIErr){
+     if(e.kind==='rate'){p.state='queued';await wait(Math.min(3600,e.retryAfter||60),'Hourly AI limit reached (60 per person per hour) – continuing automatically');continue}
+     if(e.code==='upstream_busy'||(e.status===503&&e.code!=='upstream_quota'&&e.code!=='not_configured')){p.state='queued';R.busyN++;
+      if(R.busyN>5){R.paused=true;R.msg='The AI service is still busy after several tries. The daily OpenAI allowance (about 50 analyses) may be used up – tap Resume later. Results so far are kept.';R.busyN=0;impPaint();continue}
+      await wait(Math.min(600,e.retryAfter||60),'AI service busy – retrying automatically');continue}
+     if(['offline','auth','forbidden','timeout','network'].includes(e.kind)||e.code==='upstream_quota'||e.code==='not_configured'){p.state='queued';R.paused=true;R.msg=e.message;impPaint();continue}}
+    p.state='error';p.err=e.message||String(e)}
+   impPaint()}};
+ await Promise.all(Array.from({length:IMP.conc},worker));R.active=false;
+ for(const p of IMP.all)if(R.ids.includes(p.id)&&p.state!=='done'&&p.state!=='error')p.state='';
+ const known=new Set(IMP.rows.flatMap(r=>r.pids));IMP.rows=IMP.rows.concat(IMP.all.filter(p=>R.ids.includes(p.id)&&(p.state==='done'||p.state==='error')&&!known.has(p.id)).map(impRowFrom));
+ if(IMP.group)impAutoGroup();IMP.step=IMP.rows.length?'review':'pick';impPaint();if(R.cancel)toast('Analysis stopped – '+IMP.rows.length+' result(s) kept')}
+function impTick(){const R=IMP&&IMP.run,el=$('#imp-wait');if(!R||!el)return;const s=Math.max(0,Math.ceil((R.wait-Date.now())/1000));el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+async function impRetry(rowId){const r=IMP.rows.find(x=>x.id===rowId);if(!r)return;const done=busy('Analysing photo…');const p=impP(r.pids[0]);
+ try{const{ai}=await impPrep(p,true);const a=byId('audits',IMP.aid);p.res=await AI.analyze({images:[ai],context:{inspection:a?a.title:''}});p.err=null;p.state='done';Object.assign(r,impRowFrom(p),{id:r.id,pids:r.pids})}
+ catch(e){r.err=e.message;done();return e instanceof AIErr?AI.error(e):alertBox('Could not analyse: '+e.message)}done();impPaint()}
+/* ---------- Review: grouping, include rules, create ---------- */
+const impCls=r=>r.trade&&r.sub&&r.def&&r.trade!=='Other'?r.trade+'|'+r.sub+'|'+r.def:'';
+const impEff=r=>r.inc&&!(IMP.skipNo&&r.noDef);
+function impMerge(rows,auto){if(rows.length<2)return;const first=rows[0],idx=IMP.rows.indexOf(first);const best=rows.slice().sort((a,b)=>(b.conf||0)-(a.conf||0))[0];
+ const m={...best,id:'r'+uid(),pids:rows.flatMap(r=>r.pids),members:rows.flatMap(r=>r.members||[r]),ord:Math.min(...rows.map(r=>r.ord)),auto:!!auto,inc:true,sel:false,noDef:rows.every(r=>r.noDef),conf:best.conf};
+ IMP.rows=IMP.rows.filter(r=>!rows.includes(r));IMP.rows.splice(Math.min(idx,IMP.rows.length),0,m)}
+function impSplit(r){const i=IMP.rows.indexOf(r);if(i<0||!r.members)return;IMP.rows.splice(i,1,...r.members.map(x=>({...x,sel:false})));IMP.rows.sort((a,b)=>a.ord-b.ord)}
+function impAutoGroup(){let run=[];const flush=()=>{if(run.length>1)impMerge(run,true);run=[]};
+ for(const r of IMP.rows.slice()){if(!impEff(r)||r.err){continue}const k=impCls(r);if(k&&run.length&&impCls(run[0])===k)run.push(r);else{flush();if(k)run=[r]}}flush()}
+async function impCreate(rows,label){if(!rows.length)return;const a=byId('audits',IMP.aid);if(!a)return;let n=0;const d=busy('Creating issues… 0/'+rows.length);const upd=()=>{const x=$('.busy div');if(x)x.lastChild.textContent='Creating issues… '+n+'/'+rows.length};
+ try{for(const r of rows){const photos=[],names=[];for(const pid of r.pids){const p=impP(pid);if(!p)continue;const{prep}=await impPrep(p,false);const ph=await putPhoto({id:uid(),data:await blobToDataURL(prep.blob),w:prep.w,h:prep.h,createdAt:Date.now()});photos.push(ph.id);names.push(p.rel.replace(/^\//,''));p.prep=null;p.created=true}
+   await newItem(a.id,{title:r.title||'',description:r.desc||'',category:r.trade||'',subcategory:r.sub||'',defectType:r.def||'',photos,sourceFiles:names,importedFrom:IMP.label,...(r.ai&&r.conf!=null?{aiConfidence:r.conf}:{})});n++;upd()}}
+ catch(e){d();await alertBox(`Stopped after ${n} issue${n===1?'':'s'}: ${e.message}`,'Import');IMP.rows=IMP.rows.filter(r=>!r.pids.every(pid=>(impP(pid)||{}).created));return impPaint()}
+ d();const aid=IMP.aid;IMP=null;toast(`${n} issue${n===1?'':'s'} created${label?' '+label:''}`,3000);location.hash='#/audit/'+aid}
+async function impNoAI(mode){const ps=impSel();if(!ps.length)return;
+ if(mode==='one'){if(!await confirmBox(`Add ${ps.length} photo${ps.length>1?'s':''} to one new issue?`,'Create issue','Import photos'))return;return impCreate([{pids:ps.map(p=>p.id),title:'',desc:''}])}
+ if(!await confirmBox(`Create ${ps.length} issue${ps.length>1?'s':''} (one per photo) without AI? You can fill in the details afterwards.`,'Create issues','Import photos'))return;
+ return impCreate(ps.map(p=>({pids:[p.id],title:'',desc:''})),'from photos')}
+/* ---------- Views ---------- */
+function viewImport(aid){const a=byId('audits',aid);if(!a)return notFound();const p=byId('projects',a.projectId);
+ if(!IMP||IMP.aid!==aid){if(IMP&&(impRunning()||IMP.rows.length)&&IMP.aid!==aid){const o=byId('audits',IMP.aid);return`${crumbs([['Projects','#/'],[p.name,'#/project/'+p.id],[a.title,'#/audit/'+a.id],['Import']])}<div class="card pad"><p>An import is already in progress for “${esc(o?o.title:'another inspection')}”.</p><div class="actions"><a class="btn primary" href="#/import/${IMP.aid}">Go to it</a><button class="btn danger" data-act="imp-discard" data-id="${aid}">Discard it and start here</button></div></div>`}impNew(aid)}
+ UI.after.push(()=>{impThumbObserve();impTick()});
+ return`${crumbs([['Projects','#/'],[p.name,'#/project/'+p.id],[a.title,'#/audit/'+a.id],['Import photos']])}
+ <div class="page-head"><h1>${AI.enabled()?'Import & analyze photos':'Import photos'}<span class="sub">Into inspection “${esc(a.title)}” · up to ${IMP_CAP} photos per batch</span></h1></div><div id="imp-root">${impBody()}</div>`}
+function impPaint(){const el=$('#imp-root');if(!el||!IMP||!location.hash.startsWith('#/import/'+IMP.aid))return;const act=document.activeElement;if(act&&el.contains(act)&&IMP.step==='review'&&(act.tagName==='TEXTAREA'||(act.tagName==='INPUT'&&!/checkbox|radio/.test(act.type))))return;el.innerHTML=impBody();impThumbObserve();impTick()}
+function impBody(){return IMP.step==='source'?impSourceHTML():IMP.step==='pick'?impPickHTML():IMP.step==='run'?impRunHTML():impReviewHTML()}
+const impWarnHTML=n=>`<div class="hint imp-warn"><b>Heads-up:</b> the company's current OpenAI plan allows roughly <b>50 AI photo analyses per day</b> in total (and up to 60 AI requests per person per hour).${n?` Analysing ${n} photo${n>1?'s':''} uses ${n} of them.`:''} If a limit is reached, the import waits and continues automatically – or pause it and resume later.</div>`;
+function impSourceHTML(){const con=Dbx.connected(),d=IMP.dbx,L=IMP.link;if(Dbx.loc&&Dbx.loc.rootNs)d.teamSpace=!!Dbx.loc.teamSpace;
+ return`<div class="imp-src">
+ <div class="card pad"><h2 class="imp-h">${ic('image')} From this device</h2><p class="help" style="margin-top:0">Pick several photos${impDirOK()?' or a whole folder':''}. On iPhone, choose from Photos or Files.</p>
+  <div class="actions"><label class="btn primary">${ic('image')} Choose photos<input type="file" accept="image/*" multiple hidden data-change="imp-files"></label>${impDirOK()?`<label class="btn">${ic('folder')} Choose folder<input type="file" webkitdirectory multiple hidden data-change="imp-files"></label>`:''}</div></div>
+ <div class="card pad"><h2 class="imp-h">${ic('folder')} From a Dropbox folder</h2>${con?`
+  <form class="form-grid" onsubmit="return false"><label class="full"><span>Folder path</span><input id="imp-dbx-path" value="${esc(d.path)}" placeholder="/Site photos/Level 12" data-change="imp-dbx-path"></label>
+  ${d.teamSpace!==false?`<label><span>Look in</span><select data-change="imp-dbx-space"><option value="team" ${d.space==='team'?'selected':''}>Team space</option><option value="home" ${d.space==='home'?'selected':''}>My files (home)</option></select></label>`:''}
+  <label class="chk"><input type="checkbox" data-change="imp-dbx-rec" ${d.rec?'checked':''}> Include subfolders</label></form>
+  <div class="actions" style="margin-top:10px"><button class="btn" data-act="imp-dbx-browse">${ic('folder')} Browse</button><button class="btn primary" data-act="imp-dbx-load">Load photos</button></div>
+  ${d.loading?'<p class="help"><span class="spin"></span> Loading…</p>':d.folders?`<div class="imp-browse"><div class="imp-bpath">${esc(d.at||'/')} · ${d.imgs} photo${d.imgs===1?'':'s'} here</div>${d.at?`<button class="imp-f" data-act="imp-dbx-cd" data-path="${esc(d.at.split('/').slice(0,-1).join('/'))}">‹ Up</button>`:''}${d.folders.map(f=>`<button class="imp-f" data-act="imp-dbx-cd" data-path="${esc(f.path)}">${ic('folder')} ${esc(f.name)}</button>`).join('')||'<p class="help">No subfolders.</p>'}</div>`:''}`
+  :`<div class="hint">Connect the company Dropbox in Settings to import from Dropbox.</div>`}</div>
+ <div class="card pad"><h2 class="imp-h">${ic('clip')} From a Dropbox shared link</h2>${con?`
+  <form class="form-grid" onsubmit="return false"><label class="full"><span>Shared link (folder or photo)</span><input id="imp-link" value="${esc(L.url)}" placeholder="https://www.dropbox.com/scl/fo/…" data-change="imp-link"></label>
+  <label class="chk full"><input type="checkbox" data-change="imp-link-rec" ${L.rec?'checked':''}> Include subfolders</label></form>
+  <div class="actions" style="margin-top:10px"><button class="btn primary" data-act="imp-link-load">Open link</button></div>`
+  :`<div class="hint">Connect the company Dropbox in Settings to import from shared links.</div>`}</div></div>`}
+function impPickHTML(){const all=IMP.all,b=impBatch(),sel=impSel(),n=sel.length,more=all.length>IMP_CAP,ai=AI.enabled();
+ return`<div class="card pad imp-top"><div class="imp-sum"><b>${all.length} photo${all.length===1?'':'s'}</b> found in ${esc(IMP.label)}${more?` · showing <b>${IMP.off+1}–${IMP.off+b.length}</b>`:''}</div>
+ ${more?`<div class="hint">Large folder: photos are imported in batches of ${IMP_CAP} to keep the app fast. ${IMP.off+IMP_CAP<all.length?`<button class="btn sm" data-act="imp-page" data-d="1">Next batch ›</button>`:''}${IMP.off?`<button class="btn sm" data-act="imp-page" data-d="-1">‹ Previous batch</button>`:''}</div>`:''}
+ ${IMP.notes.map(x=>`<p class="help">${esc(x)}</p>`).join('')}
+ <div class="actions imp-tools"><button class="btn sm" data-act="imp-selall" data-v="1">Select all</button><button class="btn sm" data-act="imp-selall" data-v="0">Select none</button><button class="btn sm ghost" data-act="imp-restart">Choose other photos</button><span class="imp-count"><b id="imp-n">${n}</b> selected</span></div></div>
+ <div class="imp-grid">${b.map(p=>`<label class="imp-th ${p.bad?'bad':''} ${p.sel?'on':''}" data-pid="${p.id}" title="${esc(p.rel)}"><input type="checkbox" data-change="imp-sel" data-pid="${p.id}" ${p.sel?'checked':''} ${p.bad?'disabled':''}><img ${p.thumb&&p.thumb!=='x'?`src="${p.thumb}"`:'hidden'} alt=""><span class="imp-ph">${p.heic?'HEIC':ic('image')}</span><span class="imp-nm">${esc(p.name)}</span>${p.bad?`<span class="imp-bad">${esc(p.bad)}</span>`:''}${p.state==='done'?'<span class="imp-done">✓ analysed</span>':''}</label>`).join('')}</div>
+ <div class="card pad imp-go">${ai?impWarnHTML(n):AI_RELAY_URL?'<div class="hint">Connect the company Dropbox in Settings to analyse photos with AI.</div>':''}
+ <div class="actions" style="margin-top:10px">${ai?`<label class="imp-conc">Analyse <select data-change="imp-conc"><option value="1" ${IMP.conc===1?'selected':''}>1 at a time</option><option value="2" ${IMP.conc===2?'selected':''}>2 at a time</option></select></label><button class="btn primary" data-act="imp-analyze" ${n?'':'disabled'}>${AI_ICON.spark} Analyze ${n} photo${n===1?'':'s'}</button>`:''}
+ <button class="btn ${ai?'':'primary'}" data-act="imp-noai" data-mode="each" ${n?'':'disabled'}>${ic('plus')} Create ${n} issue${n===1?'':'s'} without AI</button><button class="btn" data-act="imp-noai" data-mode="one" ${n?'':'disabled'}>${ic('image')} Add to one new issue</button>
+ ${IMP.rows.length?`<button class="btn" data-act="imp-to-review">Back to results (${IMP.rows.length})</button>`:''}</div></div>`}
+function impRunHTML(){const R=IMP.run,ps=IMP.all.filter(p=>R.ids.includes(p.id)),done=ps.filter(p=>p.state==='done').length,err=ps.filter(p=>p.state==='error').length,tot=ps.length,cur=ps.filter(p=>p.state==='running');const pc=tot?Math.round((done+err)/tot*100):0;
+ return`<div class="card pad imp-run"><div class="imp-prog-h"><b>${R.cancel?'Stopping…':R.paused?'Paused':R.wait?'Waiting':'Analysing'} · ${done+err} of ${tot}</b>${err?`<span class="c-open">${err} failed</span>`:''}</div>
+ <div class="progress imp-prog"><i style="width:${pc}%"></i></div>
+ <p class="help" id="imp-status">${R.wait?`${esc(R.why)} in <b id="imp-wait"></b> <button class="btn sm" data-act="imp-now">Try now</button>`:R.paused?esc(R.msg||'Paused.'):cur.length?'Now: '+cur.map(p=>esc(p.name)).join(', '):''}</p>
+ <div class="actions">${R.paused?`<button class="btn primary" data-act="imp-resume">Resume</button>`:`<button class="btn" data-act="imp-pause">Pause</button>`}<button class="btn danger" data-act="imp-cancel">Stop & review results</button></div>
+ ${impWarnHTML(0)}</div>
+ <div class="imp-mini">${ps.filter(p=>p.state==='done'||p.state==='error').map(p=>`<div class="imp-mrow"><img ${p.thumb&&p.thumb!=='x'?`src="${p.thumb}"`:'hidden'} alt=""><div><b>${esc(p.res?p.res.title:p.name)}</b><small>${p.res?esc([p.res.trade,p.res.subcategory,p.res.defectType].filter(x=>x&&x!=='Other').join(' › ')||'—')+' · '+Math.round((p.res.confidence||0)*100)+'%':'<span class="c-open">'+esc(p.err||'Failed')+'</span>'}</small></div></div>`).join('')}</div>`}
+function impReviewHTML(){const rows=IMP.rows,eff=rows.filter(impEff),noD=rows.filter(r=>r.noDef).length,selN=rows.filter(r=>r.sel).length,low=eff.filter(r=>r.conf!=null&&r.conf<0.5&&!r.noDef).length;
+ const opt=(list,v)=>['',...list].map(o=>`<option value="${esc(o)}" ${o===v?'selected':''}>${esc(o?subShort(o):'—')}</option>`).join('');
+ return`<div class="card pad imp-top"><div class="imp-sum"><b>${rows.length} result${rows.length===1?'':'s'}</b> from ${esc(IMP.label)}${low?` · <span class="c-open">${low} low-confidence to check</span>`:''}</div>
+ <div class="imp-opts"><label class="chk"><input type="checkbox" data-change="imp-skipno" ${IMP.skipNo?'checked':''}> Skip photos where no defect was detected${noD?` (${noD})`:''}</label>
+ <label class="chk"><input type="checkbox" data-change="imp-group" ${IMP.group?'checked':''}> Group similar photos into one issue <span class="help">(consecutive photos with the same trade › subcategory › defect)</span></label></div>
+ <div class="actions imp-tools"><button class="btn sm" data-act="imp-merge" ${selN>1?'':'disabled'}>Merge ${selN>1?selN+' ':''}selected into one issue</button><button class="btn sm ghost" data-act="imp-back">‹ Photos</button></div></div>
+ <div class="imp-rev">${rows.map((r,i)=>{const skip=IMP.skipNo&&r.noDef,lowR=r.conf!=null&&r.conf<0.5&&!r.noDef,pc=r.conf!=null?Math.round(r.conf*100):null;const ths=r.pids.map(id=>impP(id)).filter(Boolean);
+  return`<div class="card imp-row ${skip||!r.inc?'off':''} ${lowR?'low':''}" data-rid="${r.id}">
+  <div class="imp-rh"><label class="imp-inc"><input type="checkbox" data-change="imp-inc" data-rid="${r.id}" ${impEff(r)?'checked':''} ${skip?'disabled':''}> Create</label>
+   <label class="imp-rsel"><input type="checkbox" data-change="imp-rsel" data-rid="${r.id}" ${r.sel?'checked':''}> Select</label>
+   ${r.err?`<span class="badge st-Open">Analysis failed</span>`:r.noDef?`<span class="badge pr-Low">No defect detected${skip?' – skipped':''}</span>`:''}${lowR?`<span class="badge imp-lowb">Low confidence ${pc}% – check</span>`:pc!=null&&!r.noDef?`<span class="badge st-Closed">${pc}%</span>`:''}
+   ${r.members?`<span class="badge pr-Medium">${r.pids.length} photos</span><button class="btn sm ghost" data-act="imp-split" data-rid="${r.id}">Split</button>`:''}${r.err?`<button class="btn sm" data-act="imp-retry" data-rid="${r.id}">Retry</button>`:''}</div>
+  <div class="imp-rb"><div class="imp-rph">${ths.map(p=>`<img ${p.thumb&&p.thumb!=='x'?`src="${p.thumb}"`:'hidden'} alt="" title="${esc(p.rel)}">`).join('')}<small>${esc(ths.map(p=>p.name).join(', '))}</small></div>
+  <div class="imp-rf">${r.err?`<p class="c-open small" style="margin:0 0 6px">${esc(r.err)}</p>`:''}
+   <div class="imp-cls"><select data-change="imp-f" data-k="trade" data-rid="${r.id}" aria-label="Trade">${opt(taxTrades(),r.trade)}</select><select data-change="imp-f" data-k="sub" data-rid="${r.id}" aria-label="Subcategory" ${r.trade?'':'disabled'}>${opt(taxSubs(r.trade),r.sub)}</select><select data-change="imp-f" data-k="def" data-rid="${r.id}" aria-label="Defect" ${r.sub?'':'disabled'}>${opt(taxDefects(r.trade,r.sub),r.def)}</select></div>
+   <input data-change="imp-f" data-k="title" data-rid="${r.id}" value="${esc(r.title)}" placeholder="Title" aria-label="Title">
+   <textarea data-change="imp-f" data-k="desc" data-rid="${r.id}" rows="2" placeholder="Description" aria-label="Description">${esc(r.desc)}</textarea></div></div></div>`}).join('')}</div>
+ <div class="card pad imp-go imp-sticky"><div class="actions"><button class="btn primary" data-act="imp-create" ${eff.length?'':'disabled'}>${ic('plus')} Create ${eff.length} issue${eff.length===1?'':'s'}</button><span class="help">Issues are created in this inspection with the photo attached, the source file name and you as creator.</span></div></div>`}
+/* ---------- Actions ---------- */
+const impRow=el=>IMP&&IMP.rows.find(r=>r.id===el.dataset.rid);
+Object.assign(ACT,{
+ 'imp-discard':el=>{IMP=null;render()},
+ 'imp-restart':()=>{IMP.step='source';IMP.all=[];IMP.rows=[];impPaint()},
+ 'imp-dbx-browse':()=>{const i=$('#imp-dbx-path');return impDbxBrowse(i?i.value:IMP.dbx.path)},
+ 'imp-dbx-cd':el=>impDbxBrowse(el.dataset.path),
+ 'imp-dbx-load':()=>impDbxLoad(),
+ 'imp-link-load':()=>impLinkLoad(),
+ 'imp-page':el=>{IMP.off=clamp(IMP.off+(+el.dataset.d)*IMP_CAP,0,Math.max(0,IMP.all.length-1));impPaint();scrollTo(0,0)},
+ 'imp-selall':el=>{impBatch().forEach(p=>{if(!p.bad)p.sel=el.dataset.v==='1'});impPaint()},
+ 'imp-analyze':()=>impAnalyze(),
+ 'imp-noai':el=>impNoAI(el.dataset.mode),
+ 'imp-to-review':()=>{IMP.step='review';impPaint()},
+ 'imp-back':()=>{IMP.step='pick';impPaint()},
+ 'imp-pause':()=>{IMP.run.paused=true;IMP.run.msg='Paused – tap Resume to continue.';impPaint()},
+ 'imp-resume':()=>{IMP.run.paused=false;IMP.run.msg='';impPaint()},
+ 'imp-now':()=>{IMP.run.wait=1},
+ 'imp-cancel':()=>{IMP.run.cancel=true;IMP.run.paused=false;impPaint()},
+ 'imp-merge':()=>{const sel=IMP.rows.filter(r=>r.sel);impMerge(sel,false);impPaint()},
+ 'imp-split':el=>{const r=impRow(el);if(r)impSplit(r);impPaint()},
+ 'imp-retry':el=>impRetry(el.dataset.rid),
+ 'imp-create':()=>{const rows=IMP.rows.filter(impEff);const low=rows.filter(r=>r.conf!=null&&r.conf<0.5).length;return(low?confirmBox(`${low} of the ${rows.length} issues have low AI confidence. Create them anyway? You can edit them later.`,'Create issues'):Promise.resolve(true)).then(v=>v&&impCreate(rows))}});
+Object.assign(CHG,{
+ 'imp-files':el=>{const f=[...(el.files||[])];el.value='';if(f.length)impDevice(f)},
+ 'imp-dbx-path':el=>{IMP.dbx.path=el.value},
+ 'imp-dbx-space':el=>{IMP.dbx.space=el.value;IMP.dbx.folders=null;impPaint()},
+ 'imp-dbx-rec':el=>{IMP.dbx.rec=el.checked},
+ 'imp-link':el=>{IMP.link.url=el.value.trim()},
+ 'imp-link-rec':el=>{IMP.link.rec=el.checked},
+ 'imp-sel':el=>{const p=impP(el.dataset.pid);if(!p)return;p.sel=el.checked;impPaint()},
+ 'imp-conc':el=>{IMP.conc=+el.value===2?2:1},
+ 'imp-skipno':el=>{IMP.skipNo=el.checked;impPaint()},
+ 'imp-group':el=>{IMP.group=el.checked;if(IMP.group)impAutoGroup();else IMP.rows.filter(r=>r.auto).forEach(impSplit);impPaint()},
+ 'imp-inc':el=>{const r=impRow(el);if(r){r.inc=el.checked;impPaint()}},
+ 'imp-rsel':el=>{const r=impRow(el);if(r){r.sel=el.checked;impPaint()}},
+ 'imp-f':el=>{const r=impRow(el);if(!r)return;const k=el.dataset.k;r[k]=el.value;if(k==='trade'){r.sub='';r.def=''}if(k==='sub')r.def='';if(k==='trade'||k==='sub'){const a=document.activeElement;a&&a.blur&&a.blur();impPaint()}}});
+window.addEventListener('beforeunload',e=>{if(IMP&&(impRunning()||IMP.rows.length)){e.preventDefault();e.returnValue=''}});
 
 </script>
 </body>
