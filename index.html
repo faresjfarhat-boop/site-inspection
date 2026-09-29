@@ -729,7 +729,6 @@ const TAXONOMY={
   'Sanitary fixtures (WC, basin, shower)':['Loose','Damaged','Missing sealant','Not working'],
   'Ventilation and extract fans':['Not working','Noisy','Missing backdraft damper'],
   'BMS and controls':['Sensor faulty / missing','Thermostat not working','Wiring not terminated'],
-  /* NEW 2026-09 (plumbing / public health) – please review */
   'Pumps, water tanks and water heaters':['Leak','Not working','Noisy / vibration','Missing insulation / label']},
  'Electrical':{
   'Distribution boards':['Missing labels','Missing cover','Loose terminations','No circuit schedule'],
@@ -749,7 +748,6 @@ const TAXONOMY={
   'Fire dampers':['No access panel','Not tested','Damaged'],
   'Smoke control and pressurisation':['Fan not working','Damper faulty'],
   'Escape routes and signage':['Blocked route','Missing / wrong signage']},
- /* NEW 2026-09 – Architectural and Structural trades for building inspection / snagging. PLEASE REVIEW (Fares). */
  'Architectural':{
   'Walls and partitions (plaster, drywall, paint)':['Cracks','Uneven / poor finish','Paint defects (patchy, runs, stains)','Damaged / dented','Incomplete work','Damp / moisture staining'],
   'Ceilings (gypsum, suspended, access panels)':['Cracks','Uneven / sagging','Missing / damaged tiles','Stains / water marks','Access panel missing / misaligned','Poor joints / finish'],
@@ -773,7 +771,6 @@ const TAXONOMY={
   'Fixings, anchors and embedments':['Missing / loose anchor','Insufficient edge distance','Corroded fixing','Unapproved fixing'],
   'Openings, cores and penetrations':['Unapproved core / opening','Opening not trimmed / reinforced','Damage around penetration'],
   'Water ingress and durability':['Water leak through structure','Efflorescence','Damp / wet concrete']}};
-const TAX_REVIEW=['Architectural','Structural','Mechanical › Pumps, water tanks and water heaters']; // added 2026-09, shown as "new – please review" in Settings
 const taxTrades=()=>Object.keys(TAXONOMY);
 const taxSubs=t=>t&&TAXONOMY[t]?Object.keys(TAXONOMY[t]):[];
 const taxDefects=(t,s)=>t&&s&&TAXONOMY[t]&&TAXONOMY[t][s]?[...TAXONOMY[t][s].filter(x=>x!==TAX_OTHER),TAX_OTHER]:[];
@@ -1072,7 +1069,7 @@ function viewSettings(){const st=S.settings;onAfter(async()=>{if(navigator.stora
  <label><span>Default report theme</span><select data-change="setting" name="reportColor">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${st.reportColor===v?'selected':''}>${k}</option>`).join('')}</select></label>
  <div><label><span>Company logo (used when a project has no logo)</span></label><div class="img-field">${st.logo?`<img src="${esc(st.logo)}" alt="">`:''}<label class="btn sm">${ic('upload')} Choose<input type="file" accept="image/*" hidden data-change="setting-logo"></label>${st.logo?`<button class="btn sm danger" data-act="clear-logo">Remove</button>`:''}</div></div>
  <label class="full"><span>Additional trades (one per line – offered under “Other trades” in the issue form)</span><textarea data-change="setting" name="categories" rows="6">${esc(cats().join('\n'))}</textarea></label></form>
- <details class="tax-list"><summary>Built-in trade lists (trade › subcategory › defect types)</summary>${taxTrades().map(t=>`<div class="tax-t"><b>${esc(t)}</b>${TAX_REVIEW.includes(t)?' <span class="badge tax-new">new – please review</span>':''}<ul>${taxSubs(t).map(sb=>`<li><b>${esc(sb)}</b>${TAX_REVIEW.includes(t+' › '+sb)?' <span class="badge tax-new">new</span>':''}: ${esc(taxDefects(t,sb).join(', '))}</li>`).join('')}</ul></div>`).join('')}</details></div>
+ <details class="tax-list"><summary>Built-in trade lists (trade › subcategory › defect types)</summary>${taxTrades().map(t=>`<div class="tax-t"><b>${esc(t)}</b><ul>${taxSubs(t).map(sb=>`<li><b>${esc(sb)}</b>: ${esc(taxDefects(t,sb).join(', '))}</li>`).join('')}</ul></div>`).join('')}</details></div>
  <div class="card pad" style="margin-top:16px"><h2 style="margin-top:0;font-size:17px">Backup & restore</h2><p class="muted small">All data (projects, inspections, issues, photos, drawings, templates) is stored locally in this browser (IndexedDB). Export a backup regularly or to move data to another device/browser.</p>
  <div class="actions"><button class="btn primary" data-act="backup">${ic('download')} Export backup (.json)</button><label class="btn">${ic('upload')} Import backup<input type="file" accept="application/json,.json" hidden data-change="restore"></label><button class="btn" data-act="csv-all">${ic('download')} Export all issues (CSV)</button><button class="btn danger" data-act="wipe">${ic('trash')} Delete all data</button></div><p class="help" id="storage"></p></div>
  ${dbxSettingsHTML()}${aiSettingsHTML()}
