@@ -1122,7 +1122,7 @@ function viewSettings(){const st=S.settings;onAfter(async()=>{if(navigator.stora
  <label><span>Default report theme</span><select data-change="setting" name="reportColor">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${st.reportColor===v?'selected':''}>${k}</option>`).join('')}</select></label>
  <label class="full"><span>Additional trades (one per line – offered under “Other trades” in the issue form)</span><textarea data-change="setting" name="categories" rows="6">${esc(cats().join('\n'))}</textarea></label></form>
  <details class="tax-list"><summary>Built-in trade lists (trade › subcategory › defect types)</summary>${taxTrades().map(t=>`<div class="tax-t"><b>${esc(t)}</b><ul>${taxSubs(t).map(sb=>`<li><b>${esc(sb)}</b>: ${esc(taxDefects(t,sb).join(', '))}</li>`).join('')}</ul></div>`).join('')}</details></div>
- ${coSettingsHTML()}
+ ${coSettingsHTML()}${pfParentsHTML()}
  <div class="card pad" style="margin-top:16px"><h2 style="margin-top:0;font-size:17px">Backup & restore</h2><p class="muted small">All data (projects, inspections, issues, photos, drawings, templates) is stored locally in this browser (IndexedDB). Export a backup regularly or to move data to another device/browser.</p>
  <div class="actions"><button class="btn primary" data-act="backup">${ic('download')} Export backup (.json)</button><label class="btn">${ic('upload')} Import backup<input type="file" accept="application/json,.json" hidden data-change="restore"></label><button class="btn" data-act="csv-all">${ic('download')} Export all issues (CSV)</button><button class="btn danger" data-act="wipe">${ic('trash')} Delete all data</button></div><p class="help" id="storage"></p></div>
  ${dbxSettingsHTML()}${aiSettingsHTML()}
@@ -1171,7 +1171,7 @@ const ACT={
  go:el=>location.hash=el.dataset.href,
  'new-project':async()=>{if(Dbx.connected())return pfNewProject();const r=await formModal('New project',projectFields(),{date:today(),companyId:CO_DEFAULT},{extra:Dbx.configured()?'<p class="help">Tip: connect the company Dropbox (Settings) to create the project from its Dropbox project folder, e.g. D24098(MoxyIbiz).</p>':''});if(!r)return;const p=await save('projects',{id:uid(),...r});location.hash='#/project/'+p.id},
  'edit-project':async el=>{const p=byId('projects',el.dataset.id);if(!projRole(p).admin)return;
-  if(p.code){const f=projectFields().filter(x=>x.k!=='name'&&x.k!=='reference');const r=await formModal('Edit project',[{k:'displayName',label:`Display name (optional – default “${p.code} (${p.short})”)`,full:true},...f],{...p,companyId:coOf(p)?coOf(p).id:CO_DEFAULT},{extra:`<p class="help">Project <b>${esc(p.folderName||p.code)}</b> · code <b>${esc(p.code)}</b> – the name comes from the Dropbox project folder. Change the folder in the Team tab.</p>`});if(!r)return;Object.assign(p,r);p.name=r.displayName||`${p.code} (${p.short})`;await save('projects',p);return render()}
+  if(p.code){const f=projectFields().filter(x=>x.k!=='name'&&x.k!=='reference');const r=await formModal('Edit project',[{k:'displayName',label:`Display name (optional – default “${pfName(p.code,p.short)}”)`,full:true},...f],{...p,companyId:coOf(p)?coOf(p).id:CO_DEFAULT},{extra:`<p class="help">Project <b>${esc(p.folderName||p.code)}</b> · ${pfKeyLabel(p.code)} <b>${esc(p.code)}</b> – the name comes from the Dropbox project folder. Change the folder in the Team tab.</p>`});if(!r)return;Object.assign(p,r);p.name=r.displayName||pfName(p.code,p.short);await save('projects',p);return render()}
   const r=await formModal('Edit project',projectFields(),{...p,companyId:coOf(p)?coOf(p).id:CO_DEFAULT});if(!r)return;await save('projects',Object.assign(p,r));render()},
  'del-project':async el=>{const p=byId('projects',el.dataset.id);if(!projRole(p).admin)return;if(!await confirmBox(`Delete project “${p.name}” including all inspections, issues, photos and drawings?${pfLinked(p)?' The app\'s data and photos in the project Dropbox folder are deleted too (reports and other files there are kept).':''}`))return;if(pfLinked(p)&&p.code&&SM){SM.regDel=[...(SM.regDel||[]),p.code];Sync.saveMeta()}await deleteProject(p);toast('Project deleted');location.hash='#/'},
  'new-audit':async el=>{const n=S.audits.filter(a=>a.projectId===el.dataset.id).length+1;const r=await formModal('New inspection',auditFields(),{title:'Inspection '+n,date:today(),inspector:defaultInspector()});if(!r)return;const a=await save('audits',{id:uid(),projectId:el.dataset.id,...r});location.hash='#/audit/'+a.id},
@@ -2182,7 +2182,7 @@ Object.assign(ACT,{
 
 /* ===== Team tab (project page) ===== */
 function viewProjectTeam(p,R){const d=p.dbx,st=Sync.proj[p.id];const adm=R.admin&&!R.local||R.mode==='open';const con=Dbx.connected();
- const folder=pfLinked(p)?`<dl class="kv"><dt>Project</dt><dd>${esc(p.folderName||p.name)}${p.code?` · code <b>${esc(p.code)}</b>`:''}</dd><dt>Data folder</dt><dd class="brk">${esc(d.path)}</dd><dt>Location</dt><dd>${esc(pfSpaceLabel(d))}${d.nsName?` · shared folder “${esc(d.nsName)}”`:''}</dd>${st?`<dt>This device</dt><dd>${st.state==='ok'?'<span class="c-closed">✓ Syncing</span>'+(st.how?' <span class="muted small">('+esc(st.how)+')</span>':''):'<span class="c-open">'+esc(st.msg)+'</span>'}</dd>`:''}</dl>
+ const folder=pfLinked(p)?`<dl class="kv"><dt>Project</dt><dd>${esc(p.folderName||p.name)}${p.code?` · ${pfKeyLabel(p.code)} <b>${esc(p.code)}</b>`:''}</dd><dt>Data folder</dt><dd class="brk">${esc(d.path)}</dd><dt>Location</dt><dd>${esc(pfSpaceLabel(d))}${d.nsName?` · shared folder “${esc(d.nsName)}”`:''}</dd>${st?`<dt>This device</dt><dd>${st.state==='ok'?'<span class="c-closed">✓ Syncing</span>'+(st.how?' <span class="muted small">('+esc(st.how)+')</span>':''):'<span class="c-open">'+esc(st.msg)+'</span>'}</dd>`:''}</dl>
   ${d.private&&adm?`<div class="small muted" style="margin-top:6px">Dropbox reports this folder as not inside a shared folder. Members reach it through their own Dropbox access; if one can't, their app shows it on this project.</div>`:''}
   <p class="help">Everything for this project (issues, photos in <b>Photos/</b>, drawings, PDF reports in <b>Reports/</b>) is saved in this folder. Team members open it through their own Dropbox access.</p>
   ${adm&&con?`<div class="actions"><button class="btn sm" data-act="pf-change" data-id="${p.id}">${ic('folder')} Change folder</button></div>`:''}`
@@ -2219,20 +2219,20 @@ async function pfNewProject(){const pick=await pfPickDialog(null);if(!pick)retur
  const ex=S.projects.find(p=>p.code&&pfCodeKey(p.code)===pfCodeKey(code));if(ex){await alertBox(`A project for ${ex.folderName||code} already exists in the app – opening it.`,'Project exists');location.hash='#/project/'+ex.id;return}
  const reg=regByCode(code);if(reg){const onT=eqEmail(reg.ownerEmail,myEmail())||(reg.team||[]).some(m=>eqEmail(m.email,myEmail()));if(onT){await regAdopt(reg);Sync.now();location.hash='#/project/'+reg.id;return}
   return alertBox(`${reg.folderName||code} is already set up in the app by ${reg.ownerName||reg.ownerEmail}. Ask them to add you to the project team.`,'Project exists')}
- const r=await formModal('New project',[{k:'displayName',label:'Display name (optional – default is the folder name)',full:true,ph:`${code} (${pick.pf.short})`},{k:'myDesig',label:'Your designation on this project',type:'select',options:Object.keys(DESIGNATIONS).filter(k=>k!=='VIEW'),def:'ALL'},{k:'client',label:'Client'},{k:'address',label:'Site address',full:true},{k:'date',label:'Project date',type:'date'},companyField(),{k:'logo',label:'Project / client logo',type:'image'},{k:'notes',label:'Notes',type:'textarea',full:true}],
-  {date:today(),companyId:CO_DEFAULT,myDesig:'ALL'},{extra:`<div class="card pad pf-sum"><div>Project <b>${esc(pick.pf.folderName)}</b> · code <b>${esc(code)}</b> · name <b>${esc(pick.pf.short)}</b></div><div class="small muted brk">Data folder: ${esc(pick.path)}</div></div>`});if(!r)return;
+ const pf=pick.pf;const r=await formModal('New project',[{k:'displayName',label:'Display name (optional – default is the folder name)',full:true,ph:pfName(code,pf.short)},{k:'myDesig',label:'Your designation on this project',type:'select',options:Object.keys(DESIGNATIONS).filter(k=>k!=='VIEW'),def:'ALL'},{k:'client',label:'Client'},{k:'address',label:'Site address',full:true},{k:'date',label:'Project date',type:'date'},companyField(),{k:'logo',label:'Project / client logo',type:'image'},{k:'notes',label:'Notes',type:'textarea',full:true}],
+  {date:today(),companyId:(pf.parent&&pfCompanyFor(pf.parent))||CO_DEFAULT,myDesig:'ALL'},{extra:`<div class="card pad pf-sum"><div>Project <b>${esc(pf.folderName)}</b>${pf.keyed?` · key <b>${esc(code)}</b>`:` · code <b>${esc(code)}</b> · name <b>${esc(pf.short)}</b>`}${pf.parent?` · in <b>${esc(pf.parent)}</b>`:''}</div><div class="small muted brk">Data folder: ${esc(pick.path)}</div></div>`});if(!r)return;
  const done=busy('Linking Dropbox folder…');let link;try{link=await pfCommit(pick)}catch(e){done();return alertBox('Could not use that folder: '+e.message,'Dropbox folder')}done();
  const e=myEmail(),id=pfProjId(code);if(byId('projects',id)){location.hash='#/project/'+id;return}
- const p=await save('projects',{id,code,short:pick.pf.short,folderName:pick.pf.folderName,name:r.displayName||`${code} (${pick.pf.short})`,displayName:r.displayName||'',reference:code,client:r.client,address:r.address,date:r.date,company:r.company,logo:r.logo,notes:r.notes,
+ const p=await save('projects',{id,code,short:pf.short,folderName:pf.folderName,parentFolder:pf.parent||'',name:r.displayName||pfName(code,pf.short),displayName:r.displayName||'',reference:pf.keyed?'':code,client:r.client,address:r.address,date:r.date,companyId:r.companyId||CO_DEFAULT,logo:r.logo,notes:r.notes,
   dbx:link.dbx,ownerEmail:e,ownerName:myName(),team:[{email:e,name:myName(),designation:r.myDesig||'ALL',role:'admin',addedAt:Date.now(),addedBy:e}]});
  Sync.schedule(800);location.hash='#/project/'+p.id+'?tab=team'}
 async function pfChangeFolder(p){if(!projRole(p).admin)return;const pick=await pfPickDialog(p.dbx||null);if(!pick)return;const code=pick.pf.code;
  if(p.code&&pfCodeKey(p.code)!==pfCodeKey(code)&&!await confirmBox(`This folder belongs to project ${pick.pf.folderName}, but this project is ${p.folderName||p.code}. Use it anyway?`,'Use folder','Different project'))return;
  const other=S.projects.find(x=>x.id!==p.id&&x.code&&pfCodeKey(x.code)===pfCodeKey(code));if(other)return alertBox(`Another project in the app already uses ${pick.pf.folderName}: “${other.name}”.`,'Project exists');
- const moving=!pfLinked(p);if(!await confirmBox(moving?`Move “${p.name}” to ${pick.path}? Its data and photos will be saved there from now on (the old copy in “${DROPBOX_ROOT_FOLDER}” is kept as a pointer). The project name becomes ${code} (${pick.pf.short}).`:`Save this project's data in ${pick.path} from now on? Everything is uploaded again to the new folder; the old folder is left as it is.`,moving?'Move':'Change','Project folder'))return;
+ const moving=!pfLinked(p);if(!await confirmBox(moving?`Move “${p.name}” to ${pick.path}? Its data and photos will be saved there from now on (the old copy in “${DROPBOX_ROOT_FOLDER}” is kept as a pointer). The project name becomes ${pfName(code,pick.pf.short)}.`:`Save this project's data in ${pick.path} from now on? Everything is uploaded again to the new folder; the old folder is left as it is.`,moving?'Move':'Change','Project folder'))return;
  const done=busy('Preparing…');try{const link=await pfCommit(pick);
   for(const id of[...projItems(p.id).flatMap(i=>i.photos||[]),...S.drawings.filter(d=>d.projectId===p.id).map(d=>d.imageId)])if(!await DB.get('photos',id))await getPhoto(id);
-  const e=myEmail();p.dbx=link.dbx;p.code=code;p.short=pick.pf.short;p.folderName=pick.pf.folderName;if(!p.displayName)p.name=`${code} (${pick.pf.short})`;if(!p.reference)p.reference=code;
+  const e=myEmail();p.dbx=link.dbx;p.code=code;p.short=pick.pf.short;p.folderName=pick.pf.folderName;p.parentFolder=pick.pf.parent||'';if(!p.displayName)p.name=pfName(code,pick.pf.short);if(!p.reference&&!pick.pf.keyed)p.reference=code;
   if(!teamOn(p)&&e){p.ownerEmail=p.ownerEmail||e;p.ownerName=p.ownerName||myName();p.team=[{email:e,name:myName(),designation:'ALL',role:'admin',addedAt:Date.now(),addedBy:e}]}
   await save('projects',p);if(moving&&SM){SM.dirty['moved/'+p.id]=1;Sync.saveMeta()}Sync.markDirty('projects/'+p.id);done();toast('Project folder set – syncing…',2500);await Sync.now(true);render()}catch(e){done();alertBox('Could not use that folder: '+e.message,'Dropbox folder')}}
 
@@ -2251,12 +2251,32 @@ async function pfChangeFolder(p){if(!projRole(p).admin)return;const pick=await p
  is only used if it was already granted. Uses only the normal sign-in scopes. */
 const PROJECT_FOLDER_RE=/^\s*([A-Za-z0-9][A-Za-z0-9._-]{1,23}?)[\s_-]*\(\s*([^()]{1,80}?)\s*\)\s*$/; // "D24098(MoxyIbiz)", "D24098 (Moxy Ibiza)", "P-2301_(Tower B)"
 const PF_SUB_DEFAULT='Site Inspection';
+/* Parent folders whose immediate subfolders are projects (any depth, case-insensitive), e.g. …/RPE_PMC/<Project>/…
+ Admins can edit the list in Settings (S.settings.pfParents, one per line, optional "= Company name" for the default company). */
+const PF_PARENTS_DEFAULT=['RPE_PMC','RPE_PMCA','SYDEN_PMC','SYDEN_PMCA'];
+function pfParentList(){const l=S.settings&&Array.isArray(S.settings.pfParents)&&S.settings.pfParents.length?S.settings.pfParents:PF_PARENTS_DEFAULT;
+ return l.map(x=>{const[n,c]=String(x).split('=').map(s=>s.trim());return{name:n,company:c||''}}).filter(x=>x.name&&!/[\\/]/.test(x.name))}
+const pfParentOf=seg=>{const s=String(seg||'').trim().toLowerCase();return s?pfParentList().find(x=>x.name.toLowerCase()===s)||null:null};
+/* inspecting company for a parent folder: explicit "= Company", else the prefix before "_" = company name or its initials (RPE → Rice Perry Ellis) */
+function pfCompanyFor(parent){const P=typeof parent==='string'?pfParentOf(parent)||{name:parent,company:''}:parent;if(!P||typeof coList!=='function')return null;const norm=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+ if(P.company){const c=coList().find(c=>norm(c.name)===norm(P.company));if(c)return c.id}const pre=norm(String(P.name).split(/[_\s-]+/)[0]);
+ const c=coList().find(c=>norm(c.name)===pre||c.name.split(/\s+/).map(w=>w[0]||'').join('').toUpperCase()===pre);return c?c.id:null}
+const pfName=(code,short)=>String(code||'').includes('/')?short:`${code} (${short})`; // parent-folder projects: the folder name; code projects: "D24098 (MoxyIbiz)"
+const pfKeyLabel=code=>String(code||'').includes('/')?'key':'code';
 function pfMatch(name){const m=PROJECT_FOLDER_RE.exec(String(name||''));if(!m||!/\d/.test(m[1]))return null;return{code:m[1],short:m[2].trim(),folderName:String(name).trim()}}
 /* Walk up the chosen path; the nearest segment that looks like a project folder is the project */
-function pfFind(path){const segs=String(path||'').split('/').filter(Boolean);for(let i=segs.length-1;i>=0;i--){const m=pfMatch(segs[i]);if(m)return{...m,path:'/'+segs.slice(0,i+1).join('/'),rel:'/'+segs.slice(i+1).join('/')}}return null}
+/* 1. a segment matching the code pattern (deepest) is the project; 2. else the immediate child of a parent folder (RPE_PMC/<Project>)
+ is the project – its name is the project name and "<PARENT>/<name>" the unique key (stored as code). parent = nearest parent folder above. */
+function pfFind(path){const segs=String(path||'').split('/').filter(Boolean);const above=i=>{for(let j=i-1;j>=0;j--){const P=pfParentOf(segs[j]);if(P)return P.name}return''};
+ for(let i=segs.length-1;i>=0;i--){const m=pfMatch(segs[i]);if(m)return{...m,parent:above(i),path:'/'+segs.slice(0,i+1).join('/'),rel:'/'+segs.slice(i+1).join('/')}}
+ for(let i=segs.length-2;i>=0;i--){const P=pfParentOf(segs[i]);if(P){const child=segs[i+1].trim();return{code:P.name+'/'+child,short:child,folderName:child,parent:P.name,keyed:true,path:'/'+segs.slice(0,i+2).join('/'),rel:'/'+segs.slice(i+2).join('/')}}}
+ return null}
+/* the chosen folder IS a parent folder (e.g. just …/RPE_PMC) → the admin must pick a project inside it */
+const pfParentOnly=path=>{const segs=String(path||'').split('/').filter(Boolean);return segs.length?pfParentOf(segs[segs.length-1]):null};
+const PF_NONE_MSG=()=>`No project folder found in this path. Choose a folder <b>inside a Dropbox project folder</b> named like <b>D24098(MoxyIbiz)</b> (project code, then the name in brackets), <b>or a project folder inside</b> ${pfParentList().map(x=>'<b>'+esc(x.name)+'</b>').join(', ').replace(/, ([^,]*)$/,' or $1')}.`;
 const pfLinked=p=>!!(p&&p.dbx&&p.dbx.path);
 const pfCodeKey=c=>String(c||'').trim().toUpperCase();
-const pfProjId=code=>'prj_'+pfCodeKey(code).toLowerCase().replace(/[^a-z0-9]+/g,'');
+const pfProjId=code=>'prj_'+pfCodeKey(code).toLowerCase().split('/').map(s=>s.replace(/[^a-z0-9]+/g,'')).join('_'); // RPE_PMC/Some Project → prj_rpepmc_someproject
 const pfJoin=(a,b)=>(a.replace(/\/+$/,'')+'/'+String(b||'').replace(/^\/+/,'')).replace(/\/+$/,'');
 const pfSpaceLabel=d=>d&&d.space==='home'?'My files'+(d.ownerName?' of '+d.ownerName:''):'Team space';
 function photoOwners(){const m=new Map();for(const i of S.items)for(const ph of i.photos||[])m.set(ph,i.projectId);for(const d of S.drawings)if(d.imageId)m.set(d.imageId,d.projectId);return m}
@@ -2328,7 +2348,7 @@ Object.assign(Sync,{proj:{},_pl:{},
   const m=await Dbx.upload(this.pathOf(key),new Blob([JSON.stringify(body)],{type:'application/json'}),{'.tag':'overwrite'});SM.revs[key]=m.rev},
  /* ---- registry ---- */
  regPath(code){return Dbx.p('/_registry/projects/'+dbxName(pfCodeKey(code))+'.json')},
- regBody(p){return{format:'sap-registry-1',id:p.id,code:p.code||'',short:p.short||'',folderName:p.folderName||'',name:p.name,dbx:p.dbx,ownerEmail:p.ownerEmail||'',ownerName:p.ownerName||'',
+ regBody(p){return{format:'sap-registry-1',id:p.id,code:p.code||'',short:p.short||'',folderName:p.folderName||'',parentFolder:p.parentFolder||'',name:p.name,dbx:p.dbx,ownerEmail:p.ownerEmail||'',ownerName:p.ownerName||'',
   team:(p.team||[]).map(m=>({email:m.email,name:m.name||'',designation:m.designation,role:m.role})),updatedAt:p.updatedAt,updatedBy:p.updatedBy||''}},
  async regWrite(){SM.regHash=SM.regHash||{};for(const p of S.projects){if(!pfLinked(p)||!p.code||p.stub||!projRole(p).admin)continue;const b=this.regBody(p);const h=JSON.stringify(b);if(SM.regHash[p.id]===h)continue;
   try{await Dbx.upload(this.regPath(p.code),new Blob([h],{type:'application/json'}),{'.tag':'overwrite'});SM.regHash[p.id]=h;this.saveMeta()}catch(e){if(['offline','auth'].includes(e.kind))throw e;console.warn('Registry write failed',e.message)}}
@@ -2386,25 +2406,25 @@ async function pfPickDialog(cur){if(!Dbx.connected()){alertBox('Connect the comp
   b.innerHTML=`<label class="full pf-l"><span>Paste a folder path (Windows, Mac or Dropbox web address)</span><div class="pf-row"><input id="pf-paste" placeholder="K:\\SYDEN Dropbox\\Fares Farhat\\D24098(MoxyIbiz)\\5_Design Information\\5_02 Project Data" autocomplete="off" spellcheck="false"><button type="button" class="btn" data-pf="paste">Check</button></div></label>
   <div class="pf-or">or browse</div>
   <div class="pf-row">${spaces.length>1?`<select data-pf-space aria-label="Look in">${spaces.map(([v,t])=>`<option value="${v}" ${st.space===v?'selected':''}>${t}</option>`).join('')}</select>`:''}<button type="button" class="btn" data-pf="browse">${ic('folder')} Browse</button></div>
-  ${st.loading?'<p class="help"><span class="spin"></span> Loading…</p>':st.folders?`<div class="imp-browse pf-browse"><div class="imp-bpath">${esc((st.space==='team'?'Team space':'My files')+' '+(st.path||'/'))}</div>${st.path?`<button type="button" class="imp-f" data-pf="cd" data-path="${esc(st.path.split('/').slice(0,-1).join('/'))}">‹ Up</button>`:''}${st.folders.map(f=>`<button type="button" class="imp-f ${pfMatch(f.name)?'pf-proj':''}" data-pf="cd" data-path="${esc(f.path)}">${ic('folder')} ${esc(f.name)}${pfMatch(f.name)?' <span class="badge pr-Medium">project</span>':''}</button>`).join('')||'<p class="help" style="padding:0 10px">No subfolders.</p>'}</div>
+  ${st.loading?'<p class="help"><span class="spin"></span> Loading…</p>':st.folders?`<div class="imp-browse pf-browse"><div class="imp-bpath">${esc((st.space==='team'?'Team space':'My files')+' '+(st.path||'/'))}</div>${st.path?`<button type="button" class="imp-f" data-pf="cd" data-path="${esc(st.path.split('/').slice(0,-1).join('/'))}">‹ Up</button>`:''}${st.folders.map(f=>{const proj=pfMatch(f.name)||pfParentOnly(st.path),par=!proj&&pfParentOf(f.name);return`<button type="button" class="imp-f ${proj?'pf-proj':''}" data-pf="cd" data-path="${esc(f.path)}">${ic('folder')} ${esc(f.name)}${proj?' <span class="badge pr-Medium">project</span>':par?' <span class="badge">project parent</span>':''}</button>`}).join('')||'<p class="help" style="padding:0 10px">No subfolders.</p>'}</div>
    <div class="actions" style="margin-top:8px"><button type="button" class="btn sm primary" data-pf="use" ${st.path?'':'disabled'}>Use “${esc(st.path.split('/').pop()||'/')}”</button><button type="button" class="btn sm" data-pf="mkdir" ${st.path?'':'disabled'}>${ic('plus')} New folder here</button></div>`:''}
   ${st.err?`<div class="hint pf-err">${esc(st.err)}</div>`:''}
   ${r?`<div class="card pad pf-res"><div class="small muted">${esc(r.space==='team'?'Team space':'My files')}</div><div class="pf-path"><b>${esc(r.path)}</b></div>
-   ${pf?`<div class="pf-proj-ok">${ic('check')} Project folder: <b>${esc(pf.folderName)}</b> · code <b>${esc(pf.code)}</b> · name <b>${esc(pf.short)}</b></div>`:`<div class="hint pf-err">No project folder found in this path. Choose a folder <b>inside a Dropbox project folder</b> named like <b>D24098(MoxyIbiz)</b> (project code, then the name in brackets).</div>`}
+   ${pf?`<div class="pf-proj-ok">${ic('check')} Project folder: <b>${esc(pf.folderName)}</b>${pf.keyed?` · name <b>${esc(pf.short)}</b> · key <b>${esc(pf.code)}</b>`:` · code <b>${esc(pf.code)}</b> · name <b>${esc(pf.short)}</b>`}${pf.parent?` · in <b>${esc(pf.parent)}</b>`:''}</div>`:pfParentOnly(r.path)?`<div class="hint pf-err pf-parent">“${esc(r.path.split('/').pop())}” holds the projects – pick the <b>project folder</b> inside it below.</div>`:`<div class="hint pf-err">${PF_NONE_MSG()}</div>`}
    ${pf?`<label class="chk pf-sub"><input type="checkbox" data-pf-sub ${st.sub?'checked':''}> Save the app's data in a subfolder: <input data-pf-subname value="${esc(st.subName)}" style="width:140px"></label><div class="small">Data folder: <b>${esc(final)}</b></div>`:''}</div>`:''}`;
   st.final=final};
  const load=async(el,path)=>{st.loading=true;st.err='';paint(el);try{const r=await Dbx.listAll(path,false,{root:pfRoot(st.space,A)});st.path=path;st.folders=r.entries.filter(e=>e['.tag']==='folder').map(e=>({name:e.name,path:e.path_display})).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}))}catch(e){st.err='Could not open the folder: '+e.message}st.loading=false;paint(el)};
- const setRes=(space,path)=>{const c=pfCanon(space,path,A);st.res={space:c.space,path:c.path,pf:pfFind(c.path)};st.sub=!!st.res.pf&&!/\/site inspection$/i.test(c.path)};
+ const setRes=(space,path)=>{const c=pfCanon(space,path,A);const pf=pfFind(c.path);st.res={space:c.space,path:c.path,pf,parentOnly:!pf&&!!pfParentOnly(c.path)};st.sub=!!st.res.pf&&!/\/site inspection$/i.test(c.path)};
  const check=async(el)=>{const v=el.querySelector('#pf-paste').value;const q=pfParse(v,A);st.err='';if(!q||!q.path){st.err='Paste the full folder path.';return paint(el)}
   const order=q.space?[q.space,...spaces.map(s=>s[0]).filter(s=>s!==q.space)]:[st.space,...spaces.map(s=>s[0]).filter(s=>s!==st.space)];let found=null;
   for(const sp of order){try{const m=await pfMeta(sp,q.path,A);if(m['.tag']==='folder'){found={sp,path:m.path_display||q.path};break}}catch(e){if(['offline','auth'].includes(e.kind)){st.err=e.message;return paint(el)}}}
   if(!found){st.err=`“${q.path}” was not found in ${A.teamSpace?'your files or the team space':'your Dropbox'}. Check the path, or use Browse.`;st.res=null;return paint(el)}
-  st.space=found.sp;setRes(found.sp,found.path);paint(el)};
+  st.space=found.sp;setRes(found.sp,found.path);if(st.res.parentOnly)return load(el,st.res.path);paint(el)};
  return modal({title:'Project Dropbox folder',wide:true,body:`<div class="form-grid pf" id="pf-body"></div>`,
-  buttons:[{label:'Cancel',value:null},{label:'Use this folder',value:'ok',cls:'primary',validate:el=>{if(!st.res){toast('Choose or paste a folder first');return false}if(!st.res.pf){toast('Pick a folder inside a project folder like D24098(MoxyIbiz)');return false}return true}}],
+  buttons:[{label:'Cancel',value:null},{label:'Use this folder',value:'ok',cls:'primary',validate:el=>{if(!st.res){toast('Choose or paste a folder first');return false}if(!st.res.pf){toast(st.res.parentOnly?'Pick the project folder inside '+st.res.path.split('/').pop():'Pick a folder inside a project folder like D24098(MoxyIbiz) or inside '+pfParentList().map(x=>x.name).join(' / '));return false}return true}}],
   onOpen:el=>{paint(el);el.addEventListener('click',async e=>{const b=e.target.closest('[data-pf]');if(!b||!el.contains(b))return;e.preventDefault();const a=b.dataset.pf;
     if(a==='paste')return check(el);if(a==='browse')return load(el,st.folders?st.path:'');if(a==='cd')return load(el,b.dataset.path);
-    if(a==='use'){setRes(st.space,st.path);return paint(el)}
+    if(a==='use'){setRes(st.space,st.path);if(st.res.parentOnly)return load(el,st.path);return paint(el)}
     if(a==='mkdir'){const r=await formModal('New folder',[{k:'n',label:'Folder name',req:true,full:true}],{n:PF_SUB_DEFAULT},{ok:'Create'});if(!r)return;const np=pfJoin(st.path,dbxName(r.n));try{await Dbx.rpc('files/create_folder_v2',{path:np,autorename:false},{root:pfRoot(st.space,A)})}catch(x){if(!/conflict/.test(x.kind+x.message)){st.err='Could not create the folder: '+x.message;return paint(el)}}await load(el,st.path);setRes(st.space,np);paint(el)}});
    el.addEventListener('change',e=>{if(e.target.matches('[data-pf-space]')){st.space=e.target.value;st.folders=null;st.path='';load(el,'')}if(e.target.matches('[data-pf-sub]')){st.sub=e.target.checked;paint(el)}if(e.target.matches('[data-pf-subname]')){st.subName=e.target.value;paint(el)}});
    el.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pf-paste'){e.preventDefault();check(el)}})},
@@ -2554,6 +2574,12 @@ const coName=p=>{const c=coOf(p);return c?c.name:(S.settings.company||'')};
 function coCanEdit(){if(!myEmail())return true;return S.projects.some(p=>!p.stub&&projRole(p).admin)}
 async function coSave(c){c.updatedAt=Math.max(Date.now(),(c.updatedAt||0)+1);const w=currentUser();if(w.name)c.updatedBy=w.name;await DB.put('companies',c);const i=S.companies.findIndex(x=>x.id===c.id);if(i>=0)S.companies[i]=c;else S.companies.push(c);Sync.schedule(1500);return c}
 const companyField=()=>({k:'companyId',label:'Inspecting company',type:'select',req:true,options:coList().map(c=>[c.id,c.name]),def:CO_DEFAULT});
+/* Settings › Project parent folders (admins): subfolders of these folders can be projects */
+function pfParentsHTML(){const ed=coCanEdit(),l=pfParentList();
+ return`<div class="card pad" style="margin-top:16px" id="pfp-card"><h2 style="margin-top:0;font-size:17px">Project parent folders</h2>
+ <p class="muted small" style="margin-top:0">A new project can be any folder named like <b>D24098(MoxyIbiz)</b>, or any folder directly inside one of these Dropbox folders (at any depth, upper/lower case doesn't matter). One folder per line; add <b>= Company name</b> to choose the default inspecting company (otherwise RPE_… → Rice Perry Ellis, SYDEN_… → Syden).${ed?'':' Only project admins can change this list.'}</p>
+ <textarea id="pf-parents" rows="${Math.max(4,l.length+1)}" data-change="pf-parents" ${ed?'':'disabled'} style="width:100%;font-family:ui-monospace,monospace">${esc(l.map(x=>x.name+(x.company?' = '+x.company:'')).join('\n'))}</textarea>
+ <div class="help">${l.map(x=>{const c=pfCompanyFor(x);const co=c&&byId('companies',c);return`${esc(x.name)} → ${esc(co?co.name:'default company')}`}).join(' · ')}</div></div>`}
 function coSettingsHTML(){const sh=coShared(),ed=coCanEdit(),list=coList();
  return`<div class="card pad" style="margin-top:16px" id="co-card"><h2 style="margin-top:0;font-size:17px">Companies</h2>
  <p class="muted small" style="margin-top:0">The inspecting company chosen on each project brands its reports (logo, name, address). Shared with everyone through the company Dropbox.${ed?'':' Only project admins can edit companies.'}</p>
@@ -2573,7 +2599,8 @@ async function coEdit(c){const isNew=!c;const sh=coShared();
  if(!r)return;if(r.del){const n=S.projects.filter(p=>!p.stub&&p.companyId===c.id).length;if(!await confirmBox(`Delete company “${c.name}”?${n?` ${n} project${n>1?'s':''} still use it (their reports keep it until you choose another company).`:''}`))return;c.deleted=true;await coSave(c);toast('Company deleted');return render()}
  if(isNew)c={id:'co_'+uid(),ord:50,createdAt:Date.now()};Object.assign(c,r);delete c.deleted;await coSave(c);toast('Company saved');render()}
 Object.assign(ACT,{'co-edit':el=>{if(coCanEdit())return coEdit(byId('companies',el.dataset.id))},'co-new':()=>{if(coCanEdit())return coEdit(null)}});
-Object.assign(CHG,{'co-shared':async el=>{if(!coCanEdit())return;const sh={...coShared()};sh[el.name]=el.value.trim();await coSave(sh);toast('Saved',1000)}});
+Object.assign(CHG,{'pf-parents':async el=>{if(!coCanEdit())return;const l=el.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  S.settings.pfParents=l.length&&l.join('\n')!==PF_PARENTS_DEFAULT.join('\n')?l:null;await saveSettings();toast('Saved',1000);render()},'co-shared':async el=>{if(!coCanEdit())return;const sh={...coShared()};sh[el.name]=el.value.trim();await coSave(sh);toast('Saved',1000)}});
 Object.assign(Sync,{
  coPath(){return Dbx.p('/_registry/companies.json')},
  coHashOf(list){const canon=r=>Object.fromEntries(Object.keys(r).sort().map(k=>[k,r[k]]));return JSON.stringify(list.filter(r=>r&&r.id).map(canon).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))},
