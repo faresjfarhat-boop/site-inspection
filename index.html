@@ -263,6 +263,61 @@ body.wl-mode .topnav{display:none}
 .ai-oos{background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;padding:8px 10px;border-radius:8px;margin:8px 0;font-size:14px}.imp-flag{font-size:13.5px;color:#5b21b6;margin:4px 0}
 .tax-list{margin-top:14px;font-size:13.5px}.tax-list summary{cursor:pointer;font-weight:600}.tax-t{margin:10px 0}.tax-t ul{margin:4px 0 0;padding-left:18px}.tax-new{background:#fef9c3;color:#854d0e;border-color:#fde68a}
 @media(max-width:600px){.role-pill{padding:3px 8px;font-size:11px}.team-row select{max-width:46vw}.pf .pf-row .btn{flex:none}}
+/* ---- Issue page: photo pane (left, sticky, full height) + details (right) – phones: photo on top ---- */
+.iv{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.iv-split{display:none}
+.iv-media{background:#111827;color:#e5e7eb;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:var(--r);min-width:0}
+.iv-stage{position:relative;height:58vh;min-height:240px;border-radius:8px;overflow:hidden;background:#0b1220}
+.iv-stage.photos{display:block}
+.iv-stage .ph{position:absolute;inset:0;border:0;border-radius:0;background:transparent;aspect-ratio:auto;display:none}
+.iv-stage .ph.on{display:block}
+.iv-stage .ph img{object-fit:contain;cursor:zoom-in;display:block}
+.iv-stage .ph .ph-act{padding:10px;gap:6px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.iv-stage .ph .ph-act button{padding:6px 10px;font-size:13px;display:inline-flex;align-items:center;gap:4px}
+.iv-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:44px;height:44px;border-radius:50%;border:0;background:rgba(15,23,42,.55);color:#fff;font-size:28px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0 0 4px}
+.iv-nav:hover{background:rgba(15,23,42,.8)}.iv-nav.prev{left:10px}.iv-nav.next{right:10px}
+.iv-cap{display:flex;align-items:baseline;gap:10px;font-size:14px;min-width:0}
+.iv-name{font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.iv-src{color:#94a3b8;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.iv-src::before{content:'from ';opacity:.8}.iv-src[hidden]{display:none}
+.iv-cnt{margin-left:auto;color:#94a3b8;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.iv-strip{display:flex;gap:10px;align-items:center;min-width:0}
+.iv-thumbs{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px;scrollbar-width:thin}
+.iv-th{flex:none;width:64px;height:48px;padding:0;border:2px solid transparent;border-radius:7px;overflow:hidden;background:#1f2937;cursor:pointer;opacity:.7}
+.iv-th img{width:100%;height:100%;object-fit:cover;display:block}.iv-th:hover{opacity:1}.iv-th.on{border-color:#60a5fa;opacity:1}
+.iv-add{display:flex;gap:6px;margin-left:auto;flex:none}
+.iv-media .btn:not(.primary){background:#1f2937;color:#e5e7eb;border-color:#374151}.iv-media .btn:not(.primary):hover{background:#273244}
+.iv-drop{flex:1;min-height:52vh;border:2px dashed #475569;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px;color:#cbd5e1;cursor:pointer;transition:background .15s,border-color .15s}
+.iv-drop b{font-size:18px;color:#fff}.iv-drop>span{font-size:14px}.iv-drop-ic .ic{width:46px;height:46px;opacity:.75}
+.iv-drop.iv-over,.iv-stage.iv-over{border-color:#60a5fa;background:rgba(96,165,250,.12);outline:2px dashed #60a5fa;outline-offset:-4px}
+.iv-drop.iv-ro{cursor:default}.iv-drop-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.iv-side{min-width:0;container-type:inline-size}
+.iv-pin{margin-top:16px}
+@container (max-width:400px){.iv-side .form-grid{grid-template-columns:1fr}}
+@container (max-width:640px){.iv-side .cls-grid{grid-template-columns:1fr}}
+@media (max-width:760px){
+ .iv-media{margin:-12px -10px 0;border-radius:0;padding:8px}
+ .iv-stage{height:56vh}.iv-drop{min-height:44vh}
+ .iv-stage .ph .ph-act button{padding:7px 9px}
+ .iv-nav{width:38px;height:38px;font-size:24px}
+}
+@media (min-width:761px){
+ body.iv-mode main{max-width:none;padding:0}
+ .iv{grid-template-columns:minmax(0,var(--iv-l,62fr)) 10px minmax(330px,var(--iv-r,38fr));gap:0;align-items:start}
+ .iv-media{position:sticky;top:56px;height:calc(100vh - 56px);height:calc(100dvh - 56px);border-radius:0;padding:12px}
+ .iv-stage{flex:1;height:auto;min-height:0}
+ .iv-drop{min-height:0}
+ .iv-split{display:block;position:sticky;top:56px;height:calc(100vh - 56px);height:calc(100dvh - 56px);cursor:col-resize;background:#e5e9ef;touch-action:none;border-left:1px solid var(--bd)}
+ .iv-split::after{content:'';position:absolute;left:3px;top:50%;width:3px;height:36px;margin-top:-18px;border-radius:2px;background:#94a3b8}
+ .iv-split:hover,.iv-drag .iv-split{background:#d6e4f5}
+ .iv-drag{user-select:none;cursor:col-resize}
+ .iv-side{padding:16px 20px 80px}
+}
+/* companies */
+.co-h{font-size:14.5px;margin:14px 0 8px}.co-logo{background:#fff;border:1px solid var(--bd);color:var(--acc)}.co-logo img{object-fit:contain}
+.co-row{cursor:default}.co-row[data-act]{cursor:pointer}
+.form-note{min-width:0}.co-adv summary{cursor:pointer;font-weight:600;color:var(--acc);font-size:14px}.co-adv .form-grid{margin-top:8px}
+.img-field [hidden]{display:none}
 
 </style>
 </head>
@@ -816,16 +871,16 @@ function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onloa
 async function resizeImage(src,max=1600,type='image/jpeg',q=0.82){const img=await loadImg(src);let w=img.naturalWidth,h=img.naturalHeight;const s=Math.min(1,max/Math.max(w,h));w=Math.max(1,Math.round(w*s));h=Math.max(1,Math.round(h*s));const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');if(type==='image/jpeg'){x.fillStyle='#fff';x.fillRect(0,0,w,h)}x.drawImage(img,0,0,w,h);return{data:c.toDataURL(type,q),w,h}}
 
 /* ===== IndexedDB ===== */
-const STORES=['projects','audits','items','drawings','templates','checklists','photos','settings'];
+const STORES=['projects','audits','items','drawings','templates','checklists','photos','settings','companies'];
 const ALL_STORES=[...STORES,'tombstones','meta'];
 const DB={db:null,
-open(){return new Promise((res,rej)=>{const r=indexedDB.open('siteauditpro-web',2);r.onupgradeneeded=()=>{const db=r.result;for(const s of ALL_STORES)if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'})};r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+open(){return new Promise((res,rej)=>{const r=indexedDB.open('siteauditpro-web',3);r.onupgradeneeded=()=>{const db=r.result;for(const s of ALL_STORES)if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'})};r.onblocked=()=>{const a=document.getElementById('app');if(a)a.innerHTML='<div class="empty"><h3>Updating…</h3>Close other Site Inspection tabs or windows to finish the update.</div>'};r.onsuccess=()=>{this.db=r.result;this.db.onversionchange=()=>{this.db.close();location.reload()};res()};r.onerror=()=>rej(r.error)})},
 tx(s,mode,fn){return new Promise((res,rej)=>{const t=this.db.transaction(s,mode);const st=t.objectStore(s);let out;const rq=fn(st);if(rq)rq.onsuccess=()=>{out=rq.result};t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('Transaction aborted'))})},
 all(s){return this.tx(s,'readonly',st=>st.getAll())},keys(s){return this.tx(s,'readonly',st=>st.getAllKeys())},get(s,id){return this.tx(s,'readonly',st=>st.get(id))},
 put(s,o){return this.tx(s,'readwrite',st=>st.put(o))},del(s,id){return this.tx(s,'readwrite',st=>st.delete(id))},clear(s){return this.tx(s,'readwrite',st=>st.clear())}};
-const S={projects:[],audits:[],items:[],drawings:[],templates:[],checklists:[],settings:{}};
+const S={projects:[],audits:[],items:[],drawings:[],templates:[],checklists:[],settings:{},companies:[]};
 const photoCache=new Map();
-async function loadAll(){for(const s of STORES){if(s==='photos'||s==='settings')continue;S[s]=await DB.all(s)}S.settings=(await DB.get('settings','main'))||{id:'main'};TOMBS.clear();for(const t of await DB.all('tombstones'))TOMBS.set(t.id,t);await Sync.loadMeta();await regLoad()}
+async function loadAll(){for(const s of STORES){if(s==='photos'||s==='settings')continue;S[s]=await DB.all(s)}S.settings=(await DB.get('settings','main'))||{id:'main'};TOMBS.clear();for(const t of await DB.all('tombstones'))TOMBS.set(t.id,t);await Sync.loadMeta();await regLoad();await coSeed()}
 const TOMBS=new Map();
 /* Which sync bundle (Dropbox JSON file) a record lives in */
 function bundleOf(store,r){if(store==='settings')return'settings';if(store==='templates')return'templates';if(store==='projects')return'projects/'+r.id;
@@ -910,7 +965,8 @@ const confirmBox=(msg,ok='Delete',title='Please confirm')=>modal({title,body:`<p
 const alertBox=(msg,title='Notice')=>modal({title,body:`<p style="margin:0">${esc(msg)}</p>`,buttons:[{label:'OK',value:true,cls:'primary'}]});
 function fieldHTML(f,v){const lab=`<span>${esc(f.label)}${f.req?' *':''}</span>`,full=f.full?'full':'';
  if(f.type==='textarea')return`<label class="${full}">${lab}<textarea name="${f.k}" rows="${f.rows||3}" placeholder="${esc(f.ph||'')}">${esc(v||'')}</textarea></label>`;
- if(f.type==='select')return`<label class="${full}">${lab}<select name="${f.k}">${f.options.map(o=>`<option ${o===(v??f.def)?'selected':''} value="${esc(o)}">${esc(o||'—')}</option>`).join('')}</select></label>`;
+ if(f.type==='select')return`<label class="${full}">${lab}<select name="${f.k}">${f.options.map(o=>{const[ov,ol]=Array.isArray(o)?o:[o,o||'—'];return`<option ${ov===(v??f.def)?'selected':''} value="${esc(ov)}">${esc(ol)}</option>`}).join('')}</select></label>`;
+ if(f.type==='note')return`<div class="full form-note">${f.html||esc(f.label)}</div>`;
  if(f.type==='image')return`<div class="full"><label>${lab}</label><div class="img-field" data-img="${f.k}" data-val="${esc(v||'')}"><img ${v?`src="${esc(v)}"`:'hidden'} alt=""><label class="btn sm">${ic('upload')} Choose image<input type="file" accept="image/*" hidden></label><button type="button" class="btn sm ghost danger" data-clear ${v?'':'hidden'}>Remove</button></div></div>`;
  if(f.type==='signature')return`<div class="full"><label>${lab}</label><canvas class="sigpad" data-sig="${f.k}" data-val="${esc(v||'')}"></canvas><div style="display:flex;justify-content:space-between;margin-top:4px"><span class="help">Sign with finger / mouse</span><button type="button" class="btn sm ghost" data-sigclear="${f.k}">Clear</button></div></div>`;
  return`<label class="${full}">${lab}<input name="${f.k}" type="${f.type||'text'}" value="${esc(v??'')}" placeholder="${esc(f.ph||'')}" ${f.list?`list="${f.list}"`:''}></label>`}
@@ -926,7 +982,7 @@ async function formModal(title,fields,vals={},opts={}){
     inp.onchange=async()=>{const f=inp.files[0];if(!f)return;const r=await resizeImage(await fileToDataURL(f),500,'image/png');box.dataset.val=r.data;img.src=r.data;img.hidden=false;clr.hidden=false};
     clr.onclick=()=>{box.dataset.val='';img.hidden=true;clr.hidden=true}});
    $$('[data-sig]',el).forEach(sigPad);$$('[data-sigclear]',el).forEach(b=>b.onclick=()=>el.querySelector(`[data-sig="${b.dataset.sigclear}"]`)._clear())},
-  collect:el=>{const o={};for(const f of fields){if(f.type==='image')o[f.k]=el.querySelector(`[data-img="${f.k}"]`).dataset.val||'';else if(f.type==='signature'){const c=el.querySelector(`[data-sig="${f.k}"]`);o[f.k]=c.dataset.dirty?c.toDataURL('image/png'):(c.dataset.val||'')}else o[f.k]=el.querySelector(`[name="${f.k}"]`).value.trim()}return o}})}
+  collect:el=>{const o={};for(const f of fields){if(f.type==='note')continue;if(f.type==='image')o[f.k]=el.querySelector(`[data-img="${f.k}"]`).dataset.val||'';else if(f.type==='signature'){const c=el.querySelector(`[data-sig="${f.k}"]`);o[f.k]=c.dataset.dirty?c.toDataURL('image/png'):(c.dataset.val||'')}else o[f.k]=el.querySelector(`[name="${f.k}"]`).value.trim()}return o}})}
 function lightbox(src){const d=document.createElement('div');d.className='lightbox';d.innerHTML=`<img src="${src}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d)}
 
 /* ===== Views ===== */
@@ -1022,11 +1078,12 @@ function viewItem(id){const i=byId('items',id);if(!i)return notFound();const a=b
  const dl=(id,vals)=>`<datalist id="${id}">${uniq(vals).map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
  const sibs=visAuditItems(a.id).sort((x,y)=>x.number-y.number),ix=sibs.findIndex(x=>x.id===id),prev=sibs[ix-1],next=sibs[ix+1];
  const dr=i.pin&&byId('drawings',i.pin.drawingId);const drs=S.drawings.filter(d=>d.projectId===p.id);
- return`${crumbs([['Projects','#/'],[p.name,'#/project/'+p.id],[a.title,'#/audit/'+a.id],['Issue #'+i.number]])}
+ onAfter(ivInit);
+ return`<div class="iv" id="iv" data-id="${i.id}">${ivMediaHTML(i,ed)}<div class="iv-split" title="Drag to resize · double-click to reset" aria-hidden="true"></div><div class="iv-side">${crumbs([['Projects','#/'],[p.name,'#/project/'+p.id],[a.title,'#/audit/'+a.id],['Issue #'+i.number]])}
  <div class="page-head"><h1><span class="num">#${i.number}</span>${esc(i.title||'Untitled issue')}<span class="sub">Created ${fmtDT(i.createdAt)}${i.createdBy?' by '+esc(i.createdBy):''} · Last edited ${fmtDT(i.updatedAt)}${i.updatedBy?' by <b>'+esc(i.updatedBy)+'</b>':''}${i.closedAt&&i.status==='Closed'?' · Closed '+fmtDT(i.closedAt):''}${(i.sourceFiles||[]).length?' · Imported from '+esc(i.sourceFiles.slice(0,3).join(', ')+(i.sourceFiles.length>3?' +'+(i.sourceFiles.length-3):'')):''}</span></h1>
  <div class="actions">${prev?`<a class="btn" href="#/item/${prev.id}" title="Previous">‹</a>`:''}${next?`<a class="btn" href="#/item/${next.id}" title="Next">›</a>`:''}${teamOn(p)&&(ed||R.admin)&&!R.ro?`<button class="btn flag-btn" data-act="flag-item" data-id="${id}">⚑ <span class="lbl">Flag to another trade</span></button>`:''}${R.ro?'':`<button class="btn" data-act="dup-item" data-id="${id}">Duplicate</button>`}${canDeleteItem(i,R)?`<button class="btn danger" data-act="del-item" data-id="${id}">${ic('trash')}</button>`:''}${R.ro?'':`<button class="btn primary" data-act="new-item" data-id="${a.id}">${ic('plus')} Next issue</button>`}</div></div>
  ${flagBannerHTML(i,p,R)}${!ed?`<div class="hint ro-hint">${R.ro?'Read-only (viewer).':`This issue is in ${esc(i.category||'another trade')} – read-only for you.`}</div>`:''}
- <div class="two-col"><div class="card pad">${ed?aiBarHTML(i):''}<form class="form-grid" onsubmit="return false" id="item-form" data-id="${i.id}"><fieldset class="fs" ${ed?'':'disabled'}>
+ <div class="card pad iv-form">${ed?aiBarHTML(i):''}<form class="form-grid" onsubmit="return false" id="item-form" data-id="${i.id}"><fieldset class="fs" ${ed?'':'disabled'}>
  <label class="full"><span>Title *</span><input name="title" data-change="item-field" value="${esc(i.title)}" placeholder="e.g. Cracked floor tile at entrance"></label>
  <label class="full"><span>Description / notes</span><textarea name="description" data-change="item-field" rows="4" placeholder="Describe the issue and the required action…">${esc(i.description)}</textarea></label>
  <label><span>Status</span><select name="status" data-change="item-field">${STATUSES.map(s=>`<option ${s===i.status?'selected':''}>${s}</option>`).join('')}</select></label>
@@ -1038,11 +1095,9 @@ function viewItem(id){const i=byId('items',id);if(!i)return notFound();const a=b
  <label><span>Cost estimate (optional)</span><input name="cost" data-change="item-field" value="${esc(i.cost||'')}" placeholder="e.g. AED 450"></label>
  <label><span>Inspection</span><select name="auditId" data-change="item-field">${S.audits.filter(x=>x.projectId===p.id).map(x=>`<option value="${x.id}" ${x.id===i.auditId?'selected':''}>${esc(x.title)}</option>`).join('')}</select></label>
  ${teamOn(p)&&i.createdBy?`<div class="full small muted">Raised by <b>${esc(personLabel(p,i.createdByEmail,i.createdBy,i.raisedDesig))}</b></div>`:''}</fieldset></form>${dl('dl-loc',all.map(x=>x.location))}${dl('dl-asg',all.map(x=>x.assignee))}<div class="help">Changes are saved automatically.</div></div>
- <div><div class="card pad"><div class="section" style="margin:0 0 10px"><h2>Drawing pin</h2></div>
+ <div class="card pad iv-pin"><div class="section" style="margin:0 0 10px"><h2>Drawing pin</h2></div>
  ${dr?`<div class="ph" style="aspect-ratio:1/1;max-width:320px;cursor:pointer" data-act="go" data-href="#/drawing/${dr.id}?focus=${i.id}"><img data-pincrop="${i.id}" alt="" style="object-fit:contain;background:#fff"></div><div class="small" style="margin:8px 0">Pin <b>#${i.number}</b> on <a href="#/drawing/${dr.id}?focus=${i.id}">${esc(dr.name)}</a></div><div class="actions"><button class="btn sm" data-act="place-pin" data-id="${i.id}">Move pin</button><button class="btn sm danger" data-act="unpin" data-id="${i.id}">Remove pin</button></div>`
- :drs.length?`<p class="muted small" style="margin-top:0">Not placed on a drawing yet.</p><button class="btn sm primary" data-act="place-pin" data-id="${i.id}">${ic('pin')} Place on drawing</button>`:`<p class="muted small" style="margin:0">Upload a drawing on the <a href="#/project/${p.id}">project page</a> to pin this issue.</p>`}</div></div></div>
- <div class="section"><h2>Photos (${(i.photos||[]).length})</h2>${ed?'':'</div><div hidden>'}<label class="btn primary sm">${ic('camera')} Take photo<input type="file" accept="image/*" capture="environment" hidden data-change="item-photos" data-id="${id}"></label><label class="btn sm">${ic('upload')} Upload<input type="file" accept="image/*" multiple hidden data-change="item-photos" data-id="${id}"></label></div>
- ${(i.photos||[]).length?`<div class="photos">${i.photos.map((ph,n)=>`<div class="ph"><span class="ph-n">${n+1}</span><img data-photo="${ph}" data-act="lightbox" alt=""><div class="ph-act" ${ed?'':'hidden'}>${aiPhotoBtn(id,ph)}${n>0?`<button data-act="photo-first" data-id="${id}" data-ph="${ph}" title="Make main photo">★</button>`:''}<button data-act="annotate" data-id="${id}" data-ph="${ph}">${ic('pen')} Annotate</button><button data-act="del-photo" data-id="${id}" data-ph="${ph}">${ic('trash')}</button></div></div>`).join('')}</div>`:`<div class="card empty">No photos yet. Take a photo with the camera or upload from your device.</div>`}`}
+ :drs.length?`<p class="muted small" style="margin-top:0">Not placed on a drawing yet.</p><button class="btn sm primary" data-act="place-pin" data-id="${i.id}">${ic('pin')} Place on drawing</button>`:`<p class="muted small" style="margin:0">Upload a drawing on the <a href="#/project/${p.id}">project page</a> to pin this issue.</p>`}</div></div></div>`}
 
 function viewDrawing(id,params){const d=byId('drawings',id);if(!d)return notFound();const p=byId('projects',d.projectId);const place=params.place&&byId('items',params.place);
  const pinned=visItems(p.id).filter(i=>i.pin&&i.pin.drawingId===id).sort((a,b)=>a.number-b.number);
@@ -1062,14 +1117,12 @@ function viewTemplates(){const ts=S.templates.slice().sort((a,b)=>a.name.localeC
 
 function viewSettings(){const st=S.settings;onAfter(async()=>{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();const el=$('#storage');if(el)el.textContent=`Storage used: ${(e.usage/1048576).toFixed(1)} MB of ~${(e.quota/1048576/1024).toFixed(1)} GB available`}});
  return`<div class="page-head"><h1>Settings</h1></div>
- <div class="card pad"><h2 style="margin-top:0;font-size:17px">Company & report defaults</h2><form class="form-grid" onsubmit="return false">
- <label><span>Company name</span><input data-change="setting" name="company" value="${esc(st.company||'')}"></label>
+ <div class="card pad"><h2 style="margin-top:0;font-size:17px">Report defaults</h2><form class="form-grid" onsubmit="return false">
  <label><span>Default inspector</span><input data-change="setting" name="inspector" value="${esc(localStorage.getItem('sap.inspector')||'')}" placeholder="This device only"></label>
- <label class="full"><span>Company details (address, phone, email – shown on report cover)</span><textarea data-change="setting" name="companyDetails" rows="2">${esc(st.companyDetails||'')}</textarea></label>
  <label><span>Default report theme</span><select data-change="setting" name="reportColor">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${st.reportColor===v?'selected':''}>${k}</option>`).join('')}</select></label>
- <div><label><span>Company logo (used when a project has no logo)</span></label><div class="img-field">${st.logo?`<img src="${esc(st.logo)}" alt="">`:''}<label class="btn sm">${ic('upload')} Choose<input type="file" accept="image/*" hidden data-change="setting-logo"></label>${st.logo?`<button class="btn sm danger" data-act="clear-logo">Remove</button>`:''}</div></div>
  <label class="full"><span>Additional trades (one per line – offered under “Other trades” in the issue form)</span><textarea data-change="setting" name="categories" rows="6">${esc(cats().join('\n'))}</textarea></label></form>
  <details class="tax-list"><summary>Built-in trade lists (trade › subcategory › defect types)</summary>${taxTrades().map(t=>`<div class="tax-t"><b>${esc(t)}</b><ul>${taxSubs(t).map(sb=>`<li><b>${esc(sb)}</b>: ${esc(taxDefects(t,sb).join(', '))}</li>`).join('')}</ul></div>`).join('')}</details></div>
+ ${coSettingsHTML()}
  <div class="card pad" style="margin-top:16px"><h2 style="margin-top:0;font-size:17px">Backup & restore</h2><p class="muted small">All data (projects, inspections, issues, photos, drawings, templates) is stored locally in this browser (IndexedDB). Export a backup regularly or to move data to another device/browser.</p>
  <div class="actions"><button class="btn primary" data-act="backup">${ic('download')} Export backup (.json)</button><label class="btn">${ic('upload')} Import backup<input type="file" accept="application/json,.json" hidden data-change="restore"></label><button class="btn" data-act="csv-all">${ic('download')} Export all issues (CSV)</button><button class="btn danger" data-act="wipe">${ic('trash')} Delete all data</button></div><p class="help" id="storage"></p></div>
  ${dbxSettingsHTML()}${aiSettingsHTML()}
@@ -1084,13 +1137,13 @@ function render(){const {parts,params}=parseHash();UI.after=[];UI.list=null;let 
  catch(e){console.error(e);html=emptyHTML('Something went wrong',e.message)}
  const app=$('#app'),key=parts.join('/'),y=scrollY;app.innerHTML=html;scrollTo(0,key===lastRoute?y:0);lastRoute=key;
  $$('.topnav a').forEach(a=>a.classList.toggle('on',a.dataset.nav===(parts[0]==='templates'||parts[0]==='settings'?parts[0]:parts[0]==='dbx-admin'?'settings':'projects')));
- document.body.classList.toggle('wl-mode',!!app.querySelector('.welcome'));UI.after.forEach(f=>f());hydrate();Sync.pill();rolePill()}
+ document.body.classList.toggle('wl-mode',!!app.querySelector('.welcome'));document.body.classList.toggle('iv-mode',!!app.querySelector('.iv'));UI.after.forEach(f=>f());hydrate();Sync.pill();rolePill()}
 const cropCache=new Map();
 function hydrate(root=document){$$('img[data-photo]',root).forEach(async im=>{if(im.src)return;const p=await getPhoto(im.dataset.photo);if(p)im.src=p.data});
  $$('img[data-pincrop]',root).forEach(async im=>{const it=byId('items',im.dataset.pincrop);if(!it||!it.pin)return;const d=byId('drawings',it.pin.drawingId);if(!d)return;const k=it.id+it.pin.x+it.pin.y+it.status;let u=cropCache.get(k);if(!u){const c=await drawingCanvas(d,[it],{crop:it.pin,maxW:600});u=c.toDataURL('image/jpeg',.85);cropCache.set(k,u)}im.src=u})}
 
 /* ===== Forms ===== */
-const projectFields=()=>[{k:'name',label:'Project name',req:true,full:true},{k:'reference',label:'Reference / job no.'},{k:'client',label:'Client'},{k:'address',label:'Site address',full:true},{k:'date',label:'Project date',type:'date'},{k:'company',label:'Prepared by (company)'},{k:'logo',label:'Project / client logo',type:'image'},{k:'notes',label:'Notes',type:'textarea',full:true}];
+const projectFields=()=>[{k:'name',label:'Project name',req:true,full:true},{k:'reference',label:'Reference / job no.'},{k:'client',label:'Client'},{k:'address',label:'Site address',full:true},{k:'date',label:'Project date',type:'date'},companyField(),{k:'logo',label:'Project / client logo',type:'image'},{k:'notes',label:'Notes',type:'textarea',full:true}];
 const defaultInspector=()=>localStorage.getItem('sap.inspector')||currentUser().name||'';
 const auditFields=()=>[{k:'title',label:'Inspection title',req:true,full:true,ph:'e.g. Pre-handover inspection'},{k:'date',label:'Date',type:'date'},{k:'inspector',label:'Inspector'},{k:'weather',label:'Weather',type:'select',options:WEATHER},{k:'attendees',label:'Attendees / present'},{k:'notes',label:'Notes / general observations',type:'textarea',full:true},{k:'signature',label:'Inspector signature',type:'signature'}];
 function nextNumber(pid){return projItems(pid).reduce((m,i)=>Math.max(m,i.number||0),0)+1}
@@ -1103,7 +1156,7 @@ async function editTemplate(t){const txt=t?t.questions.map(q=>(q.section?'# ':''
  const r=await formModal(t?'Edit template':'New template',[{k:'name',label:'Template name',req:true,full:true},{k:'description',label:'Description',full:true},{k:'q',label:'Questions – one per line. Start a line with # to make a section heading.',type:'textarea',rows:14,full:true}],{name:t?.name,description:t?.description,q:txt},{wide:true});if(!r)return;
  const old=t?t.questions:[];const qs=r.q.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const sec=l.startsWith('#');const text=l.replace(/^#+\s*/,'');const prev=old.find(o=>o.text===text&&!!o.section===sec);return{id:prev?prev.id:uid(),text,...(sec?{section:true}:{})}});
  await save('templates',{...(t||{id:uid()}),name:r.name,description:r.description,questions:qs});toast('Template saved');render()}
-async function addPhotos(it,files){const wasBlank=!it.title&&!it.category&&!(it.photos||[]).length&&!it.description;const done=busy('Adding photos…');try{for(const f of files){const r=await resizeImage(await fileToDataURL(f),1600);const p=await putPhoto({id:uid(),...r,createdAt:Date.now()});it.photos=it.photos||[];it.photos.push(p.id)}await save('items',it);toast(`${files.length} photo${files.length>1?'s':''} added`)}catch(e){console.error(e);alertBox('Could not add photo: '+e.message)}finally{done()}render();
+async function addPhotos(it,files){const wasBlank=!it.title&&!it.category&&!(it.photos||[]).length&&!it.description;const done=busy('Adding photos…');const first=(it.photos||[]).length;try{for(const f of files){const r=await resizeImage(await fileToDataURL(f),1600);const p=await putPhoto({id:uid(),...r,createdAt:Date.now()});it.photos=it.photos||[];it.photos.push(p.id);if(f.name)(it.photoSrc=it.photoSrc||{})[p.id]=f.name}await save('items',it);UI.ivSel={id:it.id,k:first};toast(`${files.length} photo${files.length>1?'s':''} added`)}catch(e){console.error(e);alertBox('Could not add photo: '+e.message)}finally{done()}render();
  if(wasBlank&&(it.photos||[]).length&&AI.enabled()&&AI.auto())AI.photo(it.id,it.photos[0],{auto:true})}
 let pdfWorkerSet=false;
 async function pdfToImage(file){if(!window.pdfjsLib)throw new Error('PDF support library not available');if(!pdfWorkerSet){const t=$('#pdfjs-worker');if(t&&t.textContent.length>1000)pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t.textContent],{type:'text/javascript'}));pdfWorkerSet=true}
@@ -1116,10 +1169,10 @@ async function uploadDrawing(pid,file){const done=busy('Importing drawing…');t
 /* ===== Actions ===== */
 const ACT={
  go:el=>location.hash=el.dataset.href,
- 'new-project':async()=>{if(Dbx.connected())return pfNewProject();const r=await formModal('New project',projectFields(),{date:today(),company:S.settings.company||''},{extra:Dbx.configured()?'<p class="help">Tip: connect the company Dropbox (Settings) to create the project from its Dropbox project folder, e.g. D24098(MoxyIbiz).</p>':''});if(!r)return;const p=await save('projects',{id:uid(),...r});location.hash='#/project/'+p.id},
+ 'new-project':async()=>{if(Dbx.connected())return pfNewProject();const r=await formModal('New project',projectFields(),{date:today(),companyId:CO_DEFAULT},{extra:Dbx.configured()?'<p class="help">Tip: connect the company Dropbox (Settings) to create the project from its Dropbox project folder, e.g. D24098(MoxyIbiz).</p>':''});if(!r)return;const p=await save('projects',{id:uid(),...r});location.hash='#/project/'+p.id},
  'edit-project':async el=>{const p=byId('projects',el.dataset.id);if(!projRole(p).admin)return;
-  if(p.code){const f=projectFields().filter(x=>x.k!=='name'&&x.k!=='reference');const r=await formModal('Edit project',[{k:'displayName',label:`Display name (optional – default “${p.code} (${p.short})”)`,full:true},...f],p,{extra:`<p class="help">Project <b>${esc(p.folderName||p.code)}</b> · code <b>${esc(p.code)}</b> – the name comes from the Dropbox project folder. Change the folder in the Team tab.</p>`});if(!r)return;Object.assign(p,r);p.name=r.displayName||`${p.code} (${p.short})`;await save('projects',p);return render()}
-  const r=await formModal('Edit project',projectFields(),p);if(!r)return;await save('projects',Object.assign(p,r));render()},
+  if(p.code){const f=projectFields().filter(x=>x.k!=='name'&&x.k!=='reference');const r=await formModal('Edit project',[{k:'displayName',label:`Display name (optional – default “${p.code} (${p.short})”)`,full:true},...f],{...p,companyId:coOf(p)?coOf(p).id:CO_DEFAULT},{extra:`<p class="help">Project <b>${esc(p.folderName||p.code)}</b> · code <b>${esc(p.code)}</b> – the name comes from the Dropbox project folder. Change the folder in the Team tab.</p>`});if(!r)return;Object.assign(p,r);p.name=r.displayName||`${p.code} (${p.short})`;await save('projects',p);return render()}
+  const r=await formModal('Edit project',projectFields(),{...p,companyId:coOf(p)?coOf(p).id:CO_DEFAULT});if(!r)return;await save('projects',Object.assign(p,r));render()},
  'del-project':async el=>{const p=byId('projects',el.dataset.id);if(!projRole(p).admin)return;if(!await confirmBox(`Delete project “${p.name}” including all inspections, issues, photos and drawings?${pfLinked(p)?' The app\'s data and photos in the project Dropbox folder are deleted too (reports and other files there are kept).':''}`))return;if(pfLinked(p)&&p.code&&SM){SM.regDel=[...(SM.regDel||[]),p.code];Sync.saveMeta()}await deleteProject(p);toast('Project deleted');location.hash='#/'},
  'new-audit':async el=>{const n=S.audits.filter(a=>a.projectId===el.dataset.id).length+1;const r=await formModal('New inspection',auditFields(),{title:'Inspection '+n,date:today(),inspector:defaultInspector()});if(!r)return;const a=await save('audits',{id:uid(),projectId:el.dataset.id,...r});location.hash='#/audit/'+a.id},
  'edit-audit':async el=>{const a=byId('audits',el.dataset.id);const r=await formModal('Edit inspection',auditFields(),a);if(!r)return;await save('audits',Object.assign(a,r));render()},
@@ -1128,7 +1181,7 @@ const ACT={
  'dup-item':async el=>{const s=byId('items',el.dataset.id);const it=await newItem(s.auditId,{title:s.title+' (copy)',description:s.description,location:s.location,category:s.category,subcategory:s.subcategory||'',defectType:s.defectType||'',priority:s.priority,assignee:s.assignee,dueDate:s.dueDate});location.hash='#/item/'+it.id},
  'del-item':async el=>{const it=byId('items',el.dataset.id);if(!canDeleteItem(it))return;if(!await confirmBox(`Delete issue #${it.number}?`))return;await deleteItem(it);location.hash='#/audit/'+it.auditId},
  'del-photo':async el=>{if(!await confirmBox('Delete this photo?'))return;const it=byId('items',el.dataset.id);it.photos=it.photos.filter(p=>p!==el.dataset.ph);await delPhoto(el.dataset.ph,it.projectId);await save('items',it);render()},
- 'photo-first':async el=>{const it=byId('items',el.dataset.id);it.photos=[el.dataset.ph,...it.photos.filter(p=>p!==el.dataset.ph)];await save('items',it);render()},
+ 'photo-first':async el=>{const it=byId('items',el.dataset.id);it.photos=[el.dataset.ph,...it.photos.filter(p=>p!==el.dataset.ph)];UI.ivSel={id:it.id,k:0};await save('items',it);render()},
  annotate:async el=>{if(await annotate(el.dataset.ph)){const it=byId('items',el.dataset.id);await save('items',it);render()}},
  lightbox:el=>lightbox(el.src),
  'place-pin':async el=>{const it=byId('items',el.dataset.id);const drs=S.drawings.filter(d=>d.projectId===it.projectId);let d=it.pin&&byId('drawings',it.pin.drawingId);
@@ -1161,7 +1214,7 @@ const ACT={
  'csv-all':()=>download(`site-inspection-all-issues-${today()}.csv`,csvBlob(visAllItems().sort((a,b)=>(a.projectId+a.number).localeCompare(b.projectId+b.number)))),
  wipe:async()=>{if(!await confirmBox('Delete ALL projects, inspections, issues, photos, drawings and templates from this browser? This cannot be undone. Export a backup first!'+(Dbx.connected()?' (Data already synced to Dropbox is not deleted there.)':''),'Delete'))return;for(const s of ALL_STORES)await DB.clear(s);photoCache.clear();await loadAll();await seed();toast(Dbx.connected()?'Local data deleted (the Dropbox copy is kept and will sync back unless you disconnect)':'All data deleted',4000);location.hash='#/';render()}};
 const CHG={
- 'item-field':async el=>{const f=el.closest('form');const it=f&&byId('items',f.dataset.id);if(!it)return;const k=el.name,v=el.value;if(k==='auditId'&&!v)return;it[k]=v.trim?v.trim():v;if(k==='status')it.closedAt=v==='Closed'?Date.now():null;await save('items',it);toast('Saved',1000);if(k==='title'){const h=$('.page-head h1');if(h&&h.firstChild&&h.firstChild.nextSibling)h.firstChild.nextSibling.textContent=it.title||'Untitled issue'}if(k==='auditId')render()},
+ 'item-field':async el=>{const f=el.closest('form');const it=f&&byId('items',f.dataset.id);if(!it)return;const k=el.name,v=el.value;if(k==='auditId'&&!v)return;it[k]=v.trim?v.trim():v;if(k==='status')it.closedAt=v==='Closed'?Date.now():null;await save('items',it);toast('Saved',1000);if(k==='title'){const h=$('.page-head h1');if(h&&h.firstChild&&h.firstChild.nextSibling)h.firstChild.nextSibling.textContent=it.title||'Untitled issue';if($('#iv-name'))ivShow(ivCur())}if(k==='auditId')render()},
  'item-photos':el=>{const files=[...el.files];if(files.length)addPhotos(byId('items',el.dataset.id),files)},
  'upload-drawing':el=>{const f=el.files[0];if(f)uploadDrawing(el.dataset.id,f)},
  flt:el=>{const f=UI.filters[UI.list.key],k=el.dataset.k;f[k]=el.value;if(k==='category'){f.subcategory='';f.defectType=''}if(k==='subcategory')f.defectType='';if(k==='category'||k==='subcategory')refreshToolbar();refreshList()},
@@ -1291,17 +1344,16 @@ async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new j
  const fit=(w,h,bw,bh)=>{const s=Math.min(bw/w,bh/h);return[w*s,h*s]};
  const chipW=l=>{font(7.5,'bold');return doc.getTextWidth(l)+5};
  const chip=(l,x,yy,col)=>{const w=chipW(l);doc.setFillColor(...hex2rgb(col));doc.roundedRect(x,yy-3.7,w,5.2,1.3,1.3,'F');font(7.5,'bold',[255,255,255]);T(l,x+2.5,yy);return w};
- const company=p.company||S.settings.company||'';
+ const co=coInfo(coOf(p)),company=co.name;
  /* cover */
- doc.setFillColor(...acc);doc.rect(0,0,PW,80,'F');const logo=p.logo||S.settings.logo;
- if(logo){const s=await imgSize(logo);const[w,h]=fit(s.w,s.h,38,26);doc.setFillColor(255,255,255);doc.roundedRect(PW-M-44,14,44,32,2,2,'F');doc.addImage(logo,imgFmt(logo),PW-M-22-w/2,30-h/2,w,h)}
+ doc.setFillColor(...acc);doc.rect(0,0,PW,80,'F');const lw=await pdfCoverLogos(doc,co,p,PW,M);
  font(10,'bold',[255,255,255]);T((o.subtitle||'Site Inspection Report').toUpperCase(),M,22);
- font(22,'bold',[255,255,255]);const tl=doc.splitTextToSize(o.title||p.name,PW-2*M-(logo?52:0)).slice(0,3);T(tl,M,33);
- font(10.5,'normal',[255,255,255]);const sub=[p.client,p.address].filter(Boolean).join('  ·  ');if(sub)T(doc.splitTextToSize(sub,PW-2*M-(logo?52:0))[0],M,33+tl.length*8.5+1);
- font(9,'normal',[255,255,255]);T('Generated '+fmtDT(Date.now()),M,72);
+ font(22,'bold',[255,255,255]);const tl=doc.splitTextToSize(o.title||p.name,PW-2*M-lw).slice(0,3);T(tl,M,33);
+ font(10.5,'normal',[255,255,255]);const sub=[p.client,p.address].filter(Boolean).join('  ·  ');if(sub)T(doc.splitTextToSize(sub,PW-2*M-lw)[0],M,33+tl.length*8.5+1);
+ if(company){font(10,'bold',[255,255,255]);T(doc.splitTextToSize('Inspecting company: '+company,PW-2*M-lw)[0],M,66)}font(9,'normal',[255,255,255]);T('Generated '+fmtDT(Date.now()),M,72);
  y=94;const rows=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)]];
  if(a)rows.push(['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]);else rows.push(['Inspections included',d.audits.map(x=>`${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')]);
- rows.push(['Prepared by',[company,S.settings.companyDetails].filter(Boolean).join('\n')]);
+ rows.push(['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]);
  for(const[k,v]of rows.filter(r=>r[1])){font(10,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,6);const h=Math.max(7,ls.length*4.6+2.6);font(8.5,'bold',GREY);T(k.toUpperCase(),M,y);font(10,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4.2,PW-M,y+h-4.2);y+=h}
  const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length;y+=4;
  const st=[['Total issues',all.length,DARK],['Open',cnt('Open'),[220,38,38]],['In progress',cnt('In Progress'),[217,119,6]],['Closed',cnt('Closed'),[22,163,74]],['Overdue',all.filter(isOver).length,[159,18,57]]];const bw=(PW-2*M-16)/5;
@@ -1330,7 +1382,7 @@ async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new j
    if(it.cost)f.push(['Cost estimate',it.cost]);if(dr)f.push(['Drawing ref.',`${dr.name} – pin #${it.number}`]);if(!a){const au=byId('audits',it.auditId);if(au)f.push(['Inspection',au.title])}
    const cw=(PW-2*M)/3;for(let k=0;k<f.length;k+=3){ensure(11);let rh=9;for(let j=0;j<3&&k+j<f.length;j++){const[l,v]=f[k+j];font(7,'bold',GREY);T(l.toUpperCase(),M+j*cw,y);font(9.5,'normal',v&&v.includes('OVERDUE')?[190,18,60]:DARK);const ls=doc.splitTextToSize(v||'–',cw-4).slice(0,2);T(ls,M+j*cw,y+4.3);rh=Math.max(rh,4.3+ls.length*4+1.8)}y+=rh}
    if(it.description){ensure(11);font(7,'bold',GREY);T('DESCRIPTION',M,y);y+=4.5;font(9.5,'normal');for(const l of doc.splitTextToSize(it.description,PW-2*M)){ensure(5);T(l,M,y);y+=4.3}y+=2}
-   const imgs=[];if(o.photos)for(const[n,id]of(it.photos||[]).entries()){const ph=await getPhoto(id);if(ph)imgs.push({data:ph.data,w:ph.w,h:ph.h,cap:'Photo '+(n+1)})}
+   const imgs=[];if(o.photos)for(const[n,id]of(it.photos||[]).entries()){const ph=await getPhoto(id);if(ph)imgs.push({data:ph.data,w:ph.w,h:ph.h,cap:photoName(it,n)})}
    if(o.pinrefs&&dr){const c=await drawingCanvas(dr,[it],{crop:it.pin,maxW:700});imgs.push({data:c.toDataURL('image/jpeg',.85),w:c.width,h:c.height,cap:'Location: '+dr.name})}
    const per=+o.perRow||3,gap=4,iw=(PW-2*M-gap*(per-1))/per,ih=iw*.75;
    for(let k=0;k<imgs.length;k+=per){ensure(ih+7);for(let j=0;j<per&&k+j<imgs.length;j++){const im=imgs[k+j],x=M+j*(iw+gap);doc.setFillColor(241,245,249);doc.rect(x,y,iw,ih,'F');const[w,h]=fit(im.w||4,im.h||3,iw,ih);doc.addImage(im.data,imgFmt(im.data),x+(iw-w)/2,y+(ih-h)/2,w,h,undefined,'FAST');font(7,'normal',GREY);T(doc.splitTextToSize(im.cap,iw)[0],x,y+ih+3.5)}y+=ih+7}
@@ -1351,38 +1403,37 @@ async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new j
   const lcw=(PW-2*M)/3;for(let k=0;k<pinned.length;k+=3){ensure(5);for(let j=0;j<3&&k+j<pinned.length;j++){const it=pinned[k+j],x=M+j*lcw;doc.setFillColor(...hex2rgb(STATUS_COLOR[it.status]));doc.circle(x+1.6,y-1.2,1.6,'F');font(8,'bold',acc);T('#'+it.number,x+4.5,y);const nw=doc.getTextWidth('#'+it.number)+1.5;font(8,'normal');T(doc.splitTextToSize(it.title||'',lcw-nw-8)[0]||'',x+4.5+nw,y)}y+=4.6}}
  /* sign-off */
  const sg=d.audits.filter(x=>x.signature);if(sg.length){ensure(20);y+=4;heading('Sign-off');for(const x of sg){ensure(40);font(9,'bold');T(`${x.inspector||'Inspector'}`,M,y);font(8.5,'normal',GREY);T(`${x.title} · ${fmtDate(x.date)}`,M,y+4.5);const s=await imgSize(x.signature);const[w,h]=fit(s.w,s.h,70,24);doc.addImage(x.signature,'PNG',M,y+7,w,h);doc.setDrawColor(150,160,170);doc.line(M,y+32,M+80,y+32);y+=40}}
- /* footer */
- const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);const w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();font(7.5,'normal',[130,140,155]);if(i>1){doc.setDrawColor(226,232,240);doc.setLineWidth(.3);doc.line(M,h-11,w-M,h-11)}
-  T(doc.splitTextToSize((o.title||p.name)+(p.reference?' · Ref '+p.reference:''),w/2-M)[0],M,h-7);if(company)T(company,w/2,h-7,{align:'center'});T(`Page ${i} of ${n}`,w-M,h-7,{align:'right'})}
+ /* page header + footer: inspecting company logo / name / address */
+ await pdfChrome(doc,co,{M,left:(o.title||p.name)+(p.reference?' · Ref '+p.reference:''),font,T});const n=doc.getNumberOfPages();
  const fname=`${safeName(o.title||p.name)}_${today()}.pdf`;window.__lastPdf={name:fname,pages:n};if(!opt.noDownload)doc.save(fname);return doc}
 
-async function printView(d,o){const done=busy('Preparing print view…');try{const acc=o.color,lt=`rgb(${mix(hex2rgb(acc),.88).join(',')})`,p=d.project,a=d.audit,per=+o.perRow||3,all=d.allItems,logo=p.logo||S.settings.logo;
- const kv=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)],...(a?[['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]]:[['Inspections',d.audits.map(x=>`${x.title} (${fmtDate(x.date)})`).join(', ')]]),['Prepared by',[p.company||S.settings.company,S.settings.companyDetails].filter(Boolean).join(' – ')],['Report date',fmtDT(Date.now())]].filter(r=>r[1]);
+async function printView(d,o){const done=busy('Preparing print view…');try{const acc=o.color,lt=`rgb(${mix(hex2rgb(acc),.88).join(',')})`,p=d.project,a=d.audit,per=+o.perRow||3,all=d.allItems,co=coInfo(coOf(p)),logo=co.logo,clogo=p.logo&&p.logo!==co.logo?p.logo:'';
+ const kv=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)],...(a?[['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]]:[['Inspections',d.audits.map(x=>`${x.title} (${fmtDate(x.date)})`).join(', ')]]),['Prepared by',[co.name,...co.lines].filter(Boolean).join('\n')],['Report date',fmtDT(Date.now())]].filter(r=>r[1]);
  const cnt=s=>all.filter(i=>i.status===s).length;let h=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.title)}</title><style>
 @page{size:A4;margin:13mm}*{box-sizing:border-box}body{font:10.5pt/1.4 Helvetica,Arial,sans-serif;color:#1e2430;margin:0;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{padding:0}}
-.cover{background:${acc};color:#fff;padding:26px;border-radius:6px;display:flex;justify-content:space-between;gap:20px}.cover h1{margin:6px 0;font-size:24pt}.cover .lg{background:#fff;border-radius:6px;padding:8px;align-self:flex-start}.cover .lg img{max-width:150px;max-height:84px;display:block}
+.cover{background:${acc};color:#fff;padding:26px;border-radius:6px;display:flex;justify-content:space-between;gap:20px}.cover h1{margin:6px 0;font-size:24pt}.cover .lg{background:#fff;border-radius:6px;padding:8px;align-self:flex-start}.cover .lg img{max-width:150px;max-height:84px;display:block}.cover .lgs{display:flex;flex-direction:column;gap:8px;align-self:flex-start}.cover .co{margin-top:14px;font-weight:bold}.cofoot{margin-top:28px;border-top:1px solid #dde3ea;padding-top:8px;font-size:8pt;color:#778;text-align:center}
 h2{color:${acc};border-bottom:2px solid ${acc};padding-bottom:4px;margin:24px 0 12px;font-size:15pt}dl{display:grid;grid-template-columns:150px 1fr;gap:5px 12px;margin:18px 0}dt{color:#667;font-weight:bold;font-size:8.5pt;text-transform:uppercase}dd{margin:0;white-space:pre-wrap}
 .stats{display:flex;gap:8px;margin:14px 0}.stats div{flex:1;border:1px solid #dde3ea;border-radius:6px;padding:8px;text-align:center;font-size:8pt;color:#667;text-transform:uppercase;font-weight:bold}.stats b{display:block;font-size:18pt}
 table{width:100%;border-collapse:collapse;font-size:9pt}th{background:${acc};color:#fff;text-align:left;padding:5px}td{padding:5px;border-bottom:1px solid #e2e8f0;vertical-align:top}tr:nth-child(even) td{background:#f6f8fb}
 .item{break-inside:avoid;page-break-inside:avoid;margin-bottom:16px;border-bottom:1px solid #e2e8f0;padding-bottom:12px}.ih{background:${lt};border-left:5px solid ${acc};padding:7px 10px;font-weight:bold;font-size:12pt;display:flex;justify-content:space-between;gap:8px;align-items:center}.ih .n{color:${acc}}
 .fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;margin:8px 0}.fields small{display:block;color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase}.imgs{display:grid;grid-template-columns:repeat(${per},1fr);gap:8px}.imgs figure{margin:0}.imgs img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#f1f5f9;display:block}figcaption{font-size:8pt;color:#667}
 .chip{color:#fff;border-radius:4px;padding:1px 7px;font-size:8.5pt;margin-left:4px;white-space:nowrap}.pb{break-before:page;page-break-before:always}.dw img{max-width:100%;max-height:235mm;display:block;margin:auto;border:1px solid #ccd}.desc{white-space:pre-wrap}.sec td{background:${lt}!important;font-weight:bold;color:${acc}}
-</style></head><body><div class="cover"><div><div style="font-weight:bold;letter-spacing:.06em">${esc((o.subtitle||'').toUpperCase())}</div><h1>${esc(o.title)}</h1><div>${esc([p.client,p.address].filter(Boolean).join(' · '))}</div></div>${logo?`<div class="lg"><img src="${logo}"></div>`:''}</div>
+</style></head><body><div class="cover"><div><div style="font-weight:bold;letter-spacing:.06em">${esc((o.subtitle||'').toUpperCase())}</div><h1>${esc(o.title)}</h1><div>${esc([p.client,p.address].filter(Boolean).join(' · '))}</div>${co.name?`<div class="co">Inspecting company: ${esc(co.name)}</div>`:''}</div>${logo||clogo?`<div class="lgs">${logo?`<div class="lg"><img src="${logo}" alt="${esc(co.name)}"></div>`:''}${clogo?`<div class="lg"><img src="${clogo}" alt=""></div>`:''}</div>`:''}</div>
 <dl>${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="stats"><div><b>${all.length}</b>Total</div><div><b style="color:#dc2626">${cnt('Open')}</b>Open</div><div><b style="color:#d97706">${cnt('In Progress')}</b>In progress</div><div><b style="color:#16a34a">${cnt('Closed')}</b>Closed</div><div><b style="color:#9f1239">${all.filter(isOver).length}</b>Overdue</div></div>${tradeCounts(all).length?`<p style="font-size:9pt;color:#556"><b>Issues by trade:</b> ${tradeCounts(all).map(([t,n])=>esc(t)+' '+n).join(' · ')}</p>`:''}${[a?a.notes:'',p.notes].filter(Boolean).map(n=>`<p class="desc">${esc(n)}</p>`).join('')}`;
  const items=d.items;if(o.summary&&items.length)h+=`<h2 class="pb">Summary of issues</h2><table><tr><th>#</th><th>Issue</th><th>Location</th><th>Trade</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due</th></tr>${items.map(i=>`<tr><td><b>#${i.number}</b></td><td>${esc(i.title)}</td><td>${esc(i.location)}</td><td>${esc(i.category)}${i.defectType?`<br><small>${esc(i.defectType)}</small>`:''}</td><td style="color:${PRIO_COLOR[i.priority]};font-weight:bold">${i.priority}</td><td style="color:${STATUS_COLOR[i.status]};font-weight:bold">${i.status}</td><td>${esc(i.assignee)}</td><td ${isOver(i)?'style="color:#be123c;font-weight:bold"':''}>${fmtDate(i.dueDate)}</td></tr>`).join('')}</table>`;
- if(items.length){h+=`<h2 class="pb">Issue details</h2>`;for(const i of items){const dr=i.pin&&byId('drawings',i.pin.drawingId);let im='';if(o.photos)for(const[n,id]of(i.photos||[]).entries()){const ph=await getPhoto(id);if(ph)im+=`<figure><img src="${ph.data}"><figcaption>Photo ${n+1}</figcaption></figure>`}
+ if(items.length){h+=`<h2 class="pb">Issue details</h2>`;for(const i of items){const dr=i.pin&&byId('drawings',i.pin.drawingId);let im='';if(o.photos)for(const[n,id]of(i.photos||[]).entries()){const ph=await getPhoto(id);if(ph)im+=`<figure><img src="${ph.data}"><figcaption>${esc(photoName(i,n))}</figcaption></figure>`}
   if(o.pinrefs&&dr){const c=await drawingCanvas(dr,[i],{crop:i.pin,maxW:600});im+=`<figure><img src="${c.toDataURL('image/jpeg',.85)}"><figcaption>Location: ${esc(dr.name)}</figcaption></figure>`}
   h+=`<div class="item"><div class="ih"><span><span class="n">#${i.number}</span> ${esc(i.title||'Untitled issue')}</span><span><span class="chip" style="background:${PRIO_COLOR[i.priority]}">${i.priority}</span><span class="chip" style="background:${STATUS_COLOR[i.status]}">${i.status}</span></span></div><div class="fields">${[['Trade',i.category],['Subcategory',i.subcategory],['Defect type',i.defectType],['Location',i.location],['Assignee',i.assignee],['Due date',fmtDate(i.dueDate)+(isOver(i)?' (OVERDUE)':'')],['Logged',fmtDT(i.createdAt)],['Drawing ref.',dr?dr.name+' – pin #'+i.number:''],['Cost',i.cost]].filter(x=>x[1]).map(([k,v])=>`<div><small>${k}</small>${esc(v)}</div>`).join('')}</div>${i.description?`<div class="desc">${esc(i.description)}</div>`:''}${im?`<div class="imgs" style="margin-top:8px">${im}</div>`:''}</div>`}}
  if(o.checklists&&d.checklists.length){h+=`<h2 class="pb">Checklists</h2>`;for(const c of d.checklists)h+=`<h3>${esc(c.name)}</h3><table><tr><th>Question</th><th style="width:60px">Answer</th><th>Comment</th></tr>${c.questions.map(q=>q.section?`<tr class="sec"><td colspan="3">${esc(q.text)}</td></tr>`:`<tr><td>${esc(q.text)}</td><td style="font-weight:bold;color:${{yes:'#16a34a',no:'#dc2626',na:'#64748b'}[q.answer]||'#999'}">${{yes:'YES',no:'NO',na:'N/A'}[q.answer]||'–'}</td><td>${esc(q.comment||'')}</td></tr>`).join('')}</table>`}
  if(o.drawings)for(const dr of d.drawings){const pinned=items.filter(i=>i.pin&&i.pin.drawingId===dr.id);if(!pinned.length)continue;const c=await drawingCanvas(dr,items,{maxW:2000});h+=`<div class="pb dw"><h2>Drawing: ${esc(dr.name)}</h2><img src="${c.toDataURL('image/jpeg',.85)}"><p style="font-size:9pt">${pinned.map(i=>`<b style="color:${STATUS_COLOR[i.status]}">#${i.number}</b> ${esc(i.title)}`).join(' &nbsp;·&nbsp; ')}</p></div>`}
  const sg=d.audits.filter(x=>x.signature);if(sg.length)h+=`<h2>Sign-off</h2>${sg.map(x=>`<div style="margin-bottom:14px"><img src="${x.signature}" style="height:70px"><div style="border-top:1px solid #999;width:260px;padding-top:4px"><b>${esc(x.inspector||'Inspector')}</b> · ${esc(x.title)} · ${fmtDate(x.date)}</div></div>`).join('')}`;
- h+='</body></html>';
+ h+=`<div class="cofoot">${esc([co.name,co.footer].filter(Boolean).join(' · '))}${co.lines.length?'<br>'+esc(coLine(co)):''}</div></body></html>`;
  const fr=document.createElement('div');fr.className='report-frame';fr.innerHTML=`<div class="bar"><b style="flex:1">Print preview – ${esc(o.title)}</b><button class="btn sm primary" data-p>${ic('print')} Print / Save as PDF</button>${Dbx.connected()?`<button class="btn sm" data-dbx>${ic('upload')} Save PDF to Dropbox</button>`:''}<button class="btn sm" data-c>Close</button></div><iframe title="Report"></iframe>`;document.body.appendChild(fr);const ifr=fr.querySelector('iframe');ifr.srcdoc=h;
  fr.querySelector('[data-p]').onclick=()=>ifr.contentWindow.print();fr.querySelector('[data-c]').onclick=()=>fr.remove();const db=fr.querySelector('[data-dbx]');if(db)db.onclick=async()=>{const dn=busy('Generating PDF for Dropbox…');try{const doc=await generatePDF(d,o,{noDownload:true});dn();await Sync.uploadReport(doc.output('blob'),d,o)}catch(e){alertBox('Failed: '+e.message)}finally{dn()}}}finally{done()}}
 
 const tradeCounts=items=>{const c={};items.forEach(i=>{if(i.category)c[i.category]=(c[i.category]||0)+1});return Object.entries(c).sort((x,y)=>y[1]-x[1]||x[0].localeCompare(y[0]))};
-function csvBlob(items){const cols=['Project','Inspection','Number','Title','Description','Location','Trade','Subcategory','Defect type','Priority','Status','Assignee','Due date','Overdue','Cost','Drawing','Pin X (%)','Pin Y (%)','Photos','Created','Updated','Closed'];const q=v=>{v=String(v??'');return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};const iso=t=>t?new Date(t).toISOString():'';
- const rows=items.map(i=>{const p=byId('projects',i.projectId),a=byId('audits',i.auditId),dr=i.pin&&byId('drawings',i.pin.drawingId);return[p&&p.name,a&&a.title,i.number,i.title,i.description,i.location,i.category,i.subcategory,i.defectType,i.priority,i.status,i.assignee,i.dueDate,isOver(i)?'Yes':'No',i.cost,dr&&dr.name,dr?(i.pin.x*100).toFixed(1):'',dr?(i.pin.y*100).toFixed(1):'',(i.photos||[]).length,iso(i.createdAt),iso(i.updatedAt),iso(i.closedAt)]});
+function csvBlob(items){const cols=['Project','Inspection','Number','Title','Description','Location','Trade','Subcategory','Defect type','Priority','Status','Assignee','Due date','Overdue','Cost','Drawing','Pin X (%)','Pin Y (%)','Photos','Created','Updated','Closed','Photo names','Inspecting company'];const q=v=>{v=String(v??'');return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};const iso=t=>t?new Date(t).toISOString():'';
+ const rows=items.map(i=>{const p=byId('projects',i.projectId),a=byId('audits',i.auditId),dr=i.pin&&byId('drawings',i.pin.drawingId);return[p&&p.name,a&&a.title,i.number,i.title,i.description,i.location,i.category,i.subcategory,i.defectType,i.priority,i.status,i.assignee,i.dueDate,isOver(i)?'Yes':'No',i.cost,dr&&dr.name,dr?(i.pin.x*100).toFixed(1):'',dr?(i.pin.y*100).toFixed(1):'',(i.photos||[]).length,iso(i.createdAt),iso(i.updatedAt),iso(i.closedAt),(i.photos||[]).map((x,k)=>photoName(i,k)).join('; '),coName(p)]});
  return new Blob(['\ufeff'+[cols,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})}
 
 /* ===== Backup ===== */
@@ -1534,7 +1585,7 @@ const Sync={state:'idle',msg:'',
  now(manual){if(!Dbx.connected())return Promise.resolve();if(this._p){this._again=true;return this._p}
   this._p=(async()=>{do{this._again=false;await this.run(manual)}while(this._again)})().finally(()=>{this._p=null});return this._p},
  async run(manual){if(!navigator.onLine){this.setState('offline');return}this.setState('syncing');
-  try{await Dbx.ensureFolder();this._runLoc=new Map();let changed=await this.pull();if(await this.regRead())changed=true;if(await this.linkedPull())changed=true;await this.push();await this.regWrite();await this.flushPdfQueue();await this.photos();await this.linkedPhotos();
+  try{await Dbx.ensureFolder();this._runLoc=new Map();let changed=await this.pull();if(await this.regRead())changed=true;if(await this.linkedPull())changed=true;await this.push();await this.regWrite();if(await this.coSync())changed=true;await this.flushPdfQueue();await this.photos();await this.linkedPhotos();
    SM.lastSync=Date.now();await DB.put('meta',SM);this.setState('ok');if(changed)safeRender();if(manual)toast('Dropbox sync complete',1400)}
   catch(e){console.warn('Sync failed:',e);await DB.put('meta',SM).catch(()=>{});
    if(e.kind==='offline'){this.setState('offline')}else if(e.kind==='noaccess'){this.setState('noaccess',e.message);if(manual)alertBox(e.message,'Company folder')}else if(e.kind==='auth'){this.setState('auth',e.message);if(manual)alertBox(e.message)}
@@ -1903,9 +1954,9 @@ function impSplit(r){const i=IMP.rows.indexOf(r);if(i<0||!r.members)return;IMP.r
 function impAutoGroup(){let run=[];const flush=()=>{if(run.length>1)impMerge(run,true);run=[]};
  for(const r of IMP.rows.slice()){if(!impEff(r)||r.err){continue}const k=impCls(r);if(k&&run.length&&impCls(run[0])===k)run.push(r);else{flush();if(k)run=[r]}}flush()}
 async function impCreate(rows,label){if(!rows.length)return;const a=byId('audits',IMP.aid);if(!a)return;let n=0;const d=busy('Creating issues… 0/'+rows.length);const upd=()=>{const x=$('.busy div');if(x)x.lastChild.textContent='Creating issues… '+n+'/'+rows.length};
- try{for(const r of rows){const photos=[],names=[];for(const pid of r.pids){const p=impP(pid);if(!p)continue;const{prep}=await impPrep(p,false);const ph=await putPhoto({id:uid(),data:await blobToDataURL(prep.blob),w:prep.w,h:prep.h,createdAt:Date.now()});photos.push(ph.id);names.push(p.rel.replace(/^\//,''));p.prep=null;p.created=true}
+ try{for(const r of rows){const photos=[],names=[],src={};for(const pid of r.pids){const p=impP(pid);if(!p)continue;const{prep}=await impPrep(p,false);const ph=await putPhoto({id:uid(),data:await blobToDataURL(prep.blob),w:prep.w,h:prep.h,createdAt:Date.now()});photos.push(ph.id);names.push(p.rel.replace(/^\//,''));src[ph.id]=p.rel.replace(/^\//,'');p.prep=null;p.created=true}
    const R=projRole(a.projectId),fl=r.flagTo&&r.doFlag?{category:r.flagTo,subcategory:'',defectType:'',flag:{status:'pending',toTrade:r.flagTo,toEmail:'',toName:'',note:'Imported photo – looks like '+r.flagTo+' (AI).',byEmail:R.email,byName:myName(),byDesig:R.desig||'',fromTrade:(R.trades&&R.trades.length===1?R.trades[0]:''),at:Date.now(),history:[{a:'flagged to '+r.flagTo+' (import)',by:myName()||R.email,at:Date.now()}]}}:{};
-   await newItem(a.id,{title:r.title||'',description:r.desc||'',category:r.trade||'',subcategory:r.sub||'',defectType:r.def||'',photos,sourceFiles:names,importedFrom:IMP.label,...(r.ai&&r.conf!=null?{aiConfidence:r.conf}:{}),...fl});n++;upd()}}
+   await newItem(a.id,{title:r.title||'',description:r.desc||'',category:r.trade||'',subcategory:r.sub||'',defectType:r.def||'',photos,photoSrc:src,sourceFiles:names,importedFrom:IMP.label,...(r.ai&&r.conf!=null?{aiConfidence:r.conf}:{}),...fl});n++;upd()}}
  catch(e){d();await alertBox(`Stopped after ${n} issue${n===1?'':'s'}: ${e.message}`,'Import');IMP.rows=IMP.rows.filter(r=>!r.pids.every(pid=>(impP(pid)||{}).created));return impPaint()}
  d();const aid=IMP.aid;IMP=null;toast(`${n} issue${n===1?'':'s'} created${label?' '+label:''}`,3000);location.hash='#/audit/'+aid}
 async function impNoAI(mode){const ps=impSel();if(!ps.length)return;
@@ -2168,8 +2219,8 @@ async function pfNewProject(){const pick=await pfPickDialog(null);if(!pick)retur
  const ex=S.projects.find(p=>p.code&&pfCodeKey(p.code)===pfCodeKey(code));if(ex){await alertBox(`A project for ${ex.folderName||code} already exists in the app – opening it.`,'Project exists');location.hash='#/project/'+ex.id;return}
  const reg=regByCode(code);if(reg){const onT=eqEmail(reg.ownerEmail,myEmail())||(reg.team||[]).some(m=>eqEmail(m.email,myEmail()));if(onT){await regAdopt(reg);Sync.now();location.hash='#/project/'+reg.id;return}
   return alertBox(`${reg.folderName||code} is already set up in the app by ${reg.ownerName||reg.ownerEmail}. Ask them to add you to the project team.`,'Project exists')}
- const r=await formModal('New project',[{k:'displayName',label:'Display name (optional – default is the folder name)',full:true,ph:`${code} (${pick.pf.short})`},{k:'myDesig',label:'Your designation on this project',type:'select',options:Object.keys(DESIGNATIONS).filter(k=>k!=='VIEW'),def:'ALL'},{k:'client',label:'Client'},{k:'address',label:'Site address',full:true},{k:'date',label:'Project date',type:'date'},{k:'company',label:'Prepared by (company)'},{k:'logo',label:'Project / client logo',type:'image'},{k:'notes',label:'Notes',type:'textarea',full:true}],
-  {date:today(),company:S.settings.company||'',myDesig:'ALL'},{extra:`<div class="card pad pf-sum"><div>Project <b>${esc(pick.pf.folderName)}</b> · code <b>${esc(code)}</b> · name <b>${esc(pick.pf.short)}</b></div><div class="small muted brk">Data folder: ${esc(pick.path)}</div></div>`});if(!r)return;
+ const r=await formModal('New project',[{k:'displayName',label:'Display name (optional – default is the folder name)',full:true,ph:`${code} (${pick.pf.short})`},{k:'myDesig',label:'Your designation on this project',type:'select',options:Object.keys(DESIGNATIONS).filter(k=>k!=='VIEW'),def:'ALL'},{k:'client',label:'Client'},{k:'address',label:'Site address',full:true},{k:'date',label:'Project date',type:'date'},companyField(),{k:'logo',label:'Project / client logo',type:'image'},{k:'notes',label:'Notes',type:'textarea',full:true}],
+  {date:today(),companyId:CO_DEFAULT,myDesig:'ALL'},{extra:`<div class="card pad pf-sum"><div>Project <b>${esc(pick.pf.folderName)}</b> · code <b>${esc(code)}</b> · name <b>${esc(pick.pf.short)}</b></div><div class="small muted brk">Data folder: ${esc(pick.path)}</div></div>`});if(!r)return;
  const done=busy('Linking Dropbox folder…');let link;try{link=await pfCommit(pick)}catch(e){done();return alertBox('Could not use that folder: '+e.message,'Dropbox folder')}done();
  const e=myEmail(),id=pfProjId(code);if(byId('projects',id)){location.hash='#/project/'+id;return}
  const p=await save('projects',{id,code,short:pick.pf.short,folderName:pick.pf.folderName,name:r.displayName||`${code} (${pick.pf.short})`,displayName:r.displayName||'',reference:code,client:r.client,address:r.address,date:r.date,company:r.company,logo:r.logo,notes:r.notes,
@@ -2190,7 +2241,7 @@ async function pfChangeFolder(p){if(!projRole(p).admin)return;const pick=await p
  Dropbox project folder "D24098(MoxyIbiz)". Layout inside that data folder <F>:
   <F>/_siteinspection/project.json            sync bundle: project (+ team) + inspections + issues + drawings + checklists + tombstones
   <F>/_siteinspection/edits/<id>.orig.jpg|.json un-annotated originals and annotation shapes
-  <F>/Photos/#012 Cracked floor tile (1) [<photoId>].jpg   readable names; the [id] suffix is the sync key (renamed when the title changes)
+  <F>/Photos/#012 Cracked floor tile - 1 [<photoId>].jpg  readable names (issue no., title, photo position in the issue); the [id] suffix is the sync key (renamed when the title / order changes)
   <F>/Drawings/<Drawing name> [<photoId>].jpg
   <F>/Reports/<report>.pdf
  Discovery (there is no server): the admin's app writes <global root>/_registry/projects/<CODE>.json with the project id, code, name,
@@ -2260,7 +2311,7 @@ const pfFolderLabel=d=>d?(d.nsName&&d.nsRel!=null?pfJoin('/'+d.nsName,d.nsRel):d
 function pfNoAccessMsg(p){const d=p.dbx||{},adm=d.ownerName||(teamAdmins(p)[0]||{}).name||'the project admin',me=(PF._acct&&PF._acct.email)||myEmail();
  return`This project's Dropbox folder “${pfFolderLabel(d)}” can't be reached from your Dropbox account${me?' ('+me+')':''}. Check you're signed in with your company Dropbox account and that you can open the folder in Dropbox; otherwise contact ${adm} (project admin).`}
 function pfReadOnlyMsg(p){const d=p.dbx||{},adm=d.ownerName||'the project admin';return`Dropbox only gives you view access to this project's folder “${pfFolderLabel(d)}”, so your changes stay on this device until you have edit access. Contact ${adm} (project admin).`}
-const pfPhotoName=(it,k,id)=>`#${String(it.number||0).padStart(3,'0')} ${dbxName(it.title||'Untitled issue').slice(0,60)} (${k+1}) [${id}].jpg`;
+const pfPhotoName=(it,k,id)=>`#${String(it.number||0).padStart(3,'0')} ${dbxName(String(it.title||'').trim()||'Untitled issue').slice(0,60)} - ${k+1} [${id}].jpg`; // same as photoName(); k = position in the issue
 const pfDrawName=(d,id)=>`${dbxName(d.name||'Drawing').slice(0,70)} [${id}].jpg`;
 const PF_ID_RE=/\[([A-Za-z0-9]+)\]\.jpg$/;
 Object.assign(Sync,{proj:{},_pl:{},
@@ -2388,9 +2439,9 @@ async function conDialog(pid){const p=byId('projects',pid),R=projRole(p);if(R.mo
  if(!r)return;if(!r.o.audits.length)return alertBox('Choose at least one inspection.');const d=conData(pid,r.o);
  if(r.v==='csv')return download(`${safeName(d.fileName)}.csv`,conCsvBlob(d.items,p));
  const toDbx=r.v==='dbx';const done=busy('Generating consolidated report…');try{const doc=await conPDF(d,r.o,{noDownload:toDbx});if(!toDbx)toast('PDF report downloaded');done();if(Dbx.connected()&&(toDbx||Dbx.prefs().autoPdf))await Sync.uploadReport(doc.output('blob'),d,r.o)}catch(e){console.error(e);alertBox('PDF generation failed: '+e.message)}finally{done()}}
-function conCsvBlob(items,p){const cols=['Project code','Project','Inspection','Number','Title','Description','Location','Trade','Subcategory','Defect type','Priority','Status','Raised by','Raised by e-mail','Raised by designation','Flag status','Flagged by','Flagged from trade','Flagged to trade','Flagged to person','Flag note','Flagged at','Return note','Assignee','Due date','Overdue','Photos','Created','Updated','Closed'];
+function conCsvBlob(items,p){const cols=['Project code','Project','Inspection','Number','Title','Description','Location','Trade','Subcategory','Defect type','Priority','Status','Raised by','Raised by e-mail','Raised by designation','Flag status','Flagged by','Flagged from trade','Flagged to trade','Flagged to person','Flag note','Flagged at','Return note','Assignee','Due date','Overdue','Photos','Created','Updated','Closed','Photo names','Inspecting company'];
  const q=v=>{v=String(v??'');return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};const iso=t=>t?new Date(t).toISOString():'';
- const rows=items.map(i=>{const a=byId('audits',i.auditId),f=i.flag||{},m=(p.team||[]).find(x=>eqEmail(x.email,i.createdByEmail));return[p.code||'',p.name,a&&a.title,i.number,i.title,i.description,i.location,i.category,i.subcategory,i.defectType,i.priority,i.status,i.createdBy||'',i.createdByEmail||'',i.raisedDesig||(m?m.designation:''),f.status||'',f.byName||f.byEmail||'',f.fromTrade||'',f.toTrade||'',f.toName||'',f.note||'',iso(f.at),f.returnNote||'',i.assignee,i.dueDate,isOver(i)?'Yes':'No',(i.photos||[]).length,iso(i.createdAt),iso(i.updatedAt),iso(i.closedAt)]});
+ const rows=items.map(i=>{const a=byId('audits',i.auditId),f=i.flag||{},m=(p.team||[]).find(x=>eqEmail(x.email,i.createdByEmail));return[p.code||'',p.name,a&&a.title,i.number,i.title,i.description,i.location,i.category,i.subcategory,i.defectType,i.priority,i.status,i.createdBy||'',i.createdByEmail||'',i.raisedDesig||(m?m.designation:''),f.status||'',f.byName||f.byEmail||'',f.fromTrade||'',f.toTrade||'',f.toName||'',f.note||'',iso(f.at),f.returnNote||'',i.assignee,i.dueDate,isOver(i)?'Yes':'No',(i.photos||[]).length,iso(i.createdAt),iso(i.updatedAt),iso(i.closedAt),(i.photos||[]).map((x,k)=>photoName(i,k)).join('; '),coName(p)]});
  return new Blob(['\ufeff'+[cols,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})}
 async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});const acc=hex2rgb(o.color||THEMES.Blue),light=mix(acc,.88),M=14,p=d.project;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
  const T=(t,x,yy,op)=>doc.text(Array.isArray(t)?t:String(t??''),x,yy,op);const font=(sz,st='normal',col=DARK)=>{doc.setFont('helvetica',st);doc.setFontSize(sz);doc.setTextColor(...col)};
@@ -2401,13 +2452,13 @@ async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF(
  const table=(cols,rows,colour)=>{const head=()=>{doc.setFillColor(...acc);doc.rect(M,y,PW-2*M,7,'F');font(8,'bold',[255,255,255]);let x=M;cols.forEach(([t,w])=>{T(t,x+1.5,y+4.8);x+=w});y+=7};head();
   rows.forEach((v,ix)=>{font(8,'normal');const ls=v.map((s,c)=>doc.splitTextToSize(String(s??'–')||'–',cols[c][1]-3).slice(0,5));const h=Math.max(...ls.map(l=>l.length))*3.4+3.2;if(y+h>PH-16){newPage();head()}if(ix%2){doc.setFillColor(246,248,251);doc.rect(M,y,PW-2*M,h,'F')}
    let x=M;ls.forEach((l,c)=>{const cc=colour&&colour(v,c);font(8,cc?'bold':c===0?'bold':'normal',cc||DARK);T(l,x+1.5,y+4.2);x+=cols[c][1]});doc.setDrawColor(226,232,240);doc.setLineWidth(.2);doc.line(M,y+h,PW-M,y+h);y+=h})};
- const company=p.company||S.settings.company||'';const logo=p.logo||S.settings.logo;
+ const co=coInfo(coOf(p)),company=co.name;
  /* cover */
- doc.setFillColor(...acc);doc.rect(0,0,PW,80,'F');if(logo){const s=await imgSize(logo);const[w,h]=fit(s.w,s.h,38,26);doc.setFillColor(255,255,255);doc.roundedRect(PW-M-44,14,44,32,2,2,'F');doc.addImage(logo,imgFmt(logo),PW-M-22-w/2,30-h/2,w,h)}
- font(10,'bold',[255,255,255]);T((d.full?'CONSOLIDATED INSPECTION REPORT':'INSPECTION REPORT – '+(d.role.desig?desigOf(d.role.desig).label:'MY TRADES')).toUpperCase(),M,22);font(22,'bold',[255,255,255]);const tl=doc.splitTextToSize(o.title||p.name,PW-2*M-(logo?52:0)).slice(0,3);T(tl,M,33);
- font(10.5,'normal',[255,255,255]);const sub=[p.client,p.address].filter(Boolean).join('  ·  ');if(sub)T(doc.splitTextToSize(sub,PW-2*M-(logo?52:0))[0],M,33+tl.length*8.5+1);font(9,'normal',[255,255,255]);T('Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),M,72);
+ doc.setFillColor(...acc);doc.rect(0,0,PW,80,'F');const lw=await pdfCoverLogos(doc,co,p,PW,M);
+ font(10,'bold',[255,255,255]);T((d.full?'CONSOLIDATED INSPECTION REPORT':'INSPECTION REPORT – '+(d.role.desig?desigOf(d.role.desig).label:'MY TRADES')).toUpperCase(),M,22);font(22,'bold',[255,255,255]);const tl=doc.splitTextToSize(o.title||p.name,PW-2*M-lw).slice(0,3);T(tl,M,33);
+ font(10.5,'normal',[255,255,255]);const sub=[p.client,p.address].filter(Boolean).join('  ·  ');if(sub)T(doc.splitTextToSize(sub,PW-2*M-lw)[0],M,33+tl.length*8.5+1);if(company){font(10,'bold',[255,255,255]);T(doc.splitTextToSize('Inspecting company: '+company,PW-2*M-lw)[0],M,66)}font(9,'normal',[255,255,255]);T('Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),M,72);
  y=94;const rows=[['Project',p.folderName||p.name],['Project code',p.code],['Client',p.client],['Site address',p.address],['Dropbox folder',pfLinked(p)?p.dbx.path:''],['Inspections included',d.audits.map(x=>`${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')],
-  ['Project team',(p.team||[]).map(m=>`${m.name||m.email} – ${desigOf(m.designation).label}${m.role==='admin'||eqEmail(m.email,p.ownerEmail)?' (admin)':''}`).join('\n')],['Scope',d.full?'All trades':roleScopeText(p)],['Prepared by',[company,S.settings.companyDetails].filter(Boolean).join('\n')]];
+  ['Project team',(p.team||[]).map(m=>`${m.name||m.email} – ${desigOf(m.designation).label}${m.role==='admin'||eqEmail(m.email,p.ownerEmail)?' (admin)':''}`).join('\n')],['Scope',d.full?'All trades':roleScopeText(p)],['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]];
  for(const[k,v]of rows.filter(r=>r[1])){font(10,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,10);const h=Math.max(7,ls.length*4.6+2.6);ensure(h);font(8.5,'bold',GREY);T(k.toUpperCase(),M,y);font(10,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4.2,PW-M,y+h-4.2);y+=h}
  const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length;y+=4;ensure(30);
  const st=[['Total issues',all.length,DARK],['Open',cnt('Open'),[220,38,38]],['In progress',cnt('In Progress'),[217,119,6]],['Closed',cnt('Closed'),[22,163,74]],['Cross-trade',d.flagged.length,[124,58,237]]];const bw=(PW-2*M-16)/5;
@@ -2430,13 +2481,119 @@ async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF(
      const au=byId('audits',it.auditId);const f=[['Trade',it.category],['Defect type',it.defectType],['Location',it.location],['Raised by',raisedBy(it,p)],['Inspection',au&&au.title],['Logged',fmtDT(it.createdAt)],['Assignee',it.assignee],['Due date',fmtDate(it.dueDate)+(isOver(it)?' (OVERDUE)':'')]];if(it.flag)f.push(['Cross-trade',flagText(it,p)]);
      const cw=(PW-2*M)/3;for(let k=0;k<f.length;k+=3){ensure(11);let rh=9;for(let j=0;j<3&&k+j<f.length;j++){const[l,v]=f[k+j];font(7,'bold',GREY);T(l.toUpperCase(),M+j*cw,y);font(9,'normal',v&&String(v).includes('OVERDUE')?[190,18,60]:DARK);const ls=doc.splitTextToSize(String(v||'–'),cw-4).slice(0,3);T(ls,M+j*cw,y+4.3);rh=Math.max(rh,4.3+ls.length*4+1.8)}y+=rh}
      if(it.description){ensure(11);font(9.5,'normal');for(const l of doc.splitTextToSize(it.description,PW-2*M)){ensure(5);T(l,M,y);y+=4.3}y+=2}
-     const imgs=[];if(o.photos)for(const[n,id]of(it.photos||[]).entries()){const ph=await getPhoto(id);if(ph)imgs.push({data:ph.data,w:ph.w,h:ph.h,cap:'Photo '+(n+1)})}
-     const per=+o.perRow||3,gap=4,iw=(PW-2*M-gap*(per-1))/per,ih=iw*.75;for(let k=0;k<imgs.length;k+=per){ensure(ih+7);for(let j=0;j<per&&k+j<imgs.length;j++){const im=imgs[k+j],x=M+j*(iw+gap);doc.setFillColor(241,245,249);doc.rect(x,y,iw,ih,'F');const[w,h]=fit(im.w||4,im.h||3,iw,ih);doc.addImage(im.data,imgFmt(im.data),x+(iw-w)/2,y+(ih-h)/2,w,h,undefined,'FAST');font(7,'normal',GREY);T(im.cap,x,y+ih+3.5)}y+=ih+7}
+     const imgs=[];if(o.photos)for(const[n,id]of(it.photos||[]).entries()){const ph=await getPhoto(id);if(ph)imgs.push({data:ph.data,w:ph.w,h:ph.h,cap:photoName(it,n)})}
+     const per=+o.perRow||3,gap=4,iw=(PW-2*M-gap*(per-1))/per,ih=iw*.75;for(let k=0;k<imgs.length;k+=per){ensure(ih+7);for(let j=0;j<per&&k+j<imgs.length;j++){const im=imgs[k+j],x=M+j*(iw+gap);doc.setFillColor(241,245,249);doc.rect(x,y,iw,ih,'F');const[w,h]=fit(im.w||4,im.h||3,iw,ih);doc.addImage(im.data,imgFmt(im.data),x+(iw-w)/2,y+(ih-h)/2,w,h,undefined,'FAST');font(7,'normal',GREY);T(doc.splitTextToSize(im.cap,iw)[0],x,y+ih+3.5)}y+=ih+7}
      y+=2;doc.setDrawColor(226,232,240);doc.setLineWidth(.3);doc.line(M,y,PW-M,y);y+=6}}}}
- const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);const w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();font(7.5,'normal',[130,140,155]);if(i>1){doc.setDrawColor(226,232,240);doc.setLineWidth(.3);doc.line(M,h-11,w-M,h-11)}
-  T(doc.splitTextToSize((o.title||p.name)+(p.code?' · '+p.code:''),w/2-M)[0],M,h-7);if(company)T(company,w/2,h-7,{align:'center'});T(`Page ${i} of ${n}`,w-M,h-7,{align:'right'})}
+ await pdfChrome(doc,co,{M,left:(o.title||p.name)+(p.code?' · '+p.code:''),font,T});const n=doc.getNumberOfPages();
  const fname=`${safeName(d.fileName)}.pdf`;window.__lastPdf={name:fname,pages:n,consolidated:true};if(!opt.noDownload)doc.save(fname);return doc}
 Object.assign(ACT,{'con-report':el=>conDialog(el.dataset.id)});
+
+/* ===== Photo names, issue photo pane, inspecting companies =====
+ Photo names: every photo is shown as "#012 Exposed cable - 1" (issue number, issue title, position of the photo in that issue),
+ computed when displayed (no stored name, no migration). Imported / uploaded photos keep their source file name in item.photoSrc.
+ Companies: the inspecting company of a project (project.companyId) brands every report (logo, name, address). Records are shared
+ by all users through <root>/_registry/companies.json (format sap-companies-1): one record per company + the shared defaults
+ record "_shared" (street address, PO Box, T, M, e-mail used by every company unless a company overrides it). Record-level
+ last-write-wins on updatedAt, soft delete (deleted:true). Normal sign-in scopes only. */
+const photoName=(it,k)=>`#${String((it&&it.number)||0).padStart(3,'0')} ${String((it&&it.title)||'').trim()||'Untitled issue'} - ${k+1}`;
+const photoSrcName=(it,id)=>(it&&it.photoSrc&&it.photoSrc[id])||'';
+
+/* ---- issue page: photo pane (left on tablets / laptops, on top on phones) ---- */
+function ivSel(i){const n=(i.photos||[]).length;const s=UI.ivSel&&UI.ivSel.id===i.id?UI.ivSel.k:0;return clamp(s|0,0,Math.max(0,n-1))}
+function ivMediaHTML(i,ed){const ph=i.photos||[],n=ph.length,id=i.id,k=ivSel(i);
+ const add=ed?`<label class="btn primary sm">${ic('camera')} Take photo<input type="file" accept="image/*" capture="environment" hidden data-change="item-photos" data-id="${id}"></label><label class="btn sm">${ic('upload')} Upload<input type="file" accept="image/*" multiple hidden data-change="item-photos" data-id="${id}"></label>`:'';
+ if(!n)return`<section class="iv-media iv-nophoto" aria-label="Photos">${ed?`<div class="iv-drop" data-drop="${id}" data-act="iv-pick"><span class="iv-drop-ic">${ic('camera')}</span><b>Add a photo of this issue</b><span>Drop photos here, take a photo or upload from your device</span><div class="iv-drop-btns">${add}</div></div>`:`<div class="iv-drop iv-ro"><span class="iv-drop-ic">${ic('camera')}</span><b>No photos</b></div>`}</section>`;
+ const src=photoSrcName(i,ph[k]);
+ return`<section class="iv-media" aria-label="Photos"><div class="iv-stage photos" ${ed?`data-drop="${id}"`:''}>${ph.map((p,j)=>`<div class="ph${j===k?' on':''}" data-k="${j}"><img data-photo="${p}" data-act="lightbox" alt="${esc(photoName(i,j))}" title="Tap to zoom"><div class="ph-act" ${ed?'':'hidden'}>${aiPhotoBtn(id,p)}${j>0?`<button data-act="photo-first" data-id="${id}" data-ph="${p}" title="Make main photo">★</button>`:''}<button data-act="annotate" data-id="${id}" data-ph="${p}">${ic('pen')} Annotate</button><button data-act="del-photo" data-id="${id}" data-ph="${p}" title="Delete photo">${ic('trash')}</button></div></div>`).join('')}
+ ${n>1?`<button type="button" class="iv-nav prev" data-act="iv-step" data-d="-1" aria-label="Previous photo">‹</button><button type="button" class="iv-nav next" data-act="iv-step" data-d="1" aria-label="Next photo">›</button>`:''}</div>
+ <div class="iv-cap"><span class="iv-name" id="iv-name">${esc(photoName(i,k))}</span><span class="iv-src" id="iv-src" ${src?'':'hidden'}>${esc(src)}</span><span class="iv-cnt" id="iv-cnt">${k+1} / ${n}</span></div>
+ ${n>1||ed?`<div class="iv-strip">${n>1?`<div class="iv-thumbs">${ph.map((p,j)=>`<button type="button" class="iv-th${j===k?' on':''}" data-act="iv-sel" data-k="${j}" title="${esc(photoName(i,j))}"><img data-photo="${p}" alt=""></button>`).join('')}</div>`:''}${ed?`<div class="iv-add">${add}</div>`:''}</div>`:''}</section>`}
+function ivShow(k){const iv=$('#iv');if(!iv)return;const it=byId('items',iv.dataset.id);if(!it)return;const n=(it.photos||[]).length;if(!n)return;k=((k%n)+n)%n;UI.ivSel={id:it.id,k};
+ $$('.iv-stage .ph',iv).forEach(el=>el.classList.toggle('on',+el.dataset.k===k));$$('.iv-th',iv).forEach(el=>el.classList.toggle('on',+el.dataset.k===k));
+ const nm=$('#iv-name'),cn=$('#iv-cnt'),sr=$('#iv-src');if(nm)nm.textContent=photoName(it,k);if(cn)cn.textContent=`${k+1} / ${n}`;if(sr){const s=photoSrcName(it,it.photos[k]);sr.textContent=s;sr.hidden=!s}
+ const ai=$('.ai-bar [data-act=ai-photo]');if(ai)ai.dataset.ph=it.photos[k];const th=$('.iv-th.on',iv);if(th&&th.scrollIntoView)th.scrollIntoView({block:'nearest',inline:'nearest'})}
+const IV_SPLIT_KEY='sap.iv.split';
+function ivInit(){const iv=$('#iv');if(!iv)return;const pct=+localStorage.getItem(IV_SPLIT_KEY);if(pct>=40&&pct<=78){iv.style.setProperty('--iv-l',pct+'fr');iv.style.setProperty('--iv-r',(100-pct)+'fr')}
+ const sp=$('.iv-split',iv);if(sp){sp.onpointerdown=e=>{e.preventDefault();sp.setPointerCapture(e.pointerId);iv.classList.add('iv-drag');const r=iv.getBoundingClientRect();
+   sp.onpointermove=ev=>{const v=clamp(Math.round((ev.clientX-r.left)/r.width*100),40,78);iv.style.setProperty('--iv-l',v+'fr');iv.style.setProperty('--iv-r',(100-v)+'fr');sp.dataset.v=v};
+   sp.onpointerup=()=>{sp.onpointermove=null;iv.classList.remove('iv-drag');if(sp.dataset.v)localStorage.setItem(IV_SPLIT_KEY,sp.dataset.v)}};
+  sp.ondblclick=()=>{localStorage.removeItem(IV_SPLIT_KEY);iv.style.removeProperty('--iv-l');iv.style.removeProperty('--iv-r')}}
+ const st=$('.iv-stage',iv);if(st){let x0=null,y0=0;st.addEventListener('touchstart',e=>{if(e.touches.length===1){x0=e.touches[0].clientX;y0=e.touches[0].clientY}else x0=null},{passive:true});
+  st.addEventListener('touchend',e=>{if(x0==null)return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)ivShow((UI.ivSel&&UI.ivSel.id===iv.dataset.id?UI.ivSel.k:0)-Math.sign(dx))},{passive:true})}}
+const ivCur=()=>{const iv=$('#iv');return iv&&UI.ivSel&&UI.ivSel.id===iv.dataset.id?UI.ivSel.k:0};
+Object.assign(ACT,{
+ 'iv-sel':el=>ivShow(+el.dataset.k),
+ 'iv-step':el=>ivShow(ivCur()+(+el.dataset.d)),
+ 'iv-pick':(el,e)=>{if(e&&e.target.closest('label,input,button'))return;const i=el.querySelector('input[multiple]');if(i)i.click()}});
+document.addEventListener('keydown',e=>{if(!$('#iv .iv-stage')||e.altKey||e.ctrlKey||e.metaKey||$('#modal-root').children.length||$('.annot,.lightbox'))return;if(e.target.closest('input,textarea,select,[contenteditable]'))return;
+ if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();ivShow(ivCur()+(e.key==='ArrowLeft'?-1:1))}});
+const ivDropEl=e=>e.target&&e.target.closest&&e.target.closest('[data-drop]');
+const ivHasFiles=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
+document.addEventListener('dragover',e=>{const z=ivDropEl(e);if(!z||!ivHasFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('iv-over')});
+document.addEventListener('dragleave',e=>{const z=ivDropEl(e);if(z&&!z.contains(e.relatedTarget))z.classList.remove('iv-over')});
+document.addEventListener('drop',e=>{const z=ivDropEl(e);if(!z||!ivHasFiles(e))return;e.preventDefault();z.classList.remove('iv-over');const it=byId('items',z.dataset.drop);const files=[...e.dataTransfer.files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|heic)$/i.test(f.name));
+ if(it&&files.length&&canEditItem(it))addPhotos(it,files);else if(it&&!files.length)toast('Drop image files (JPG / PNG)')});
+
+/* ---- inspecting companies ---- */
+const CO_SHARED='_shared',CO_DEFAULT='co_syden';
+const CO_SEED=[{id:'co_syden',name:'Syden',website:'www.syden.me',ord:1},{id:'co_riceperryellis',name:'Rice Perry Ellis',website:'www.riceperryellis.com',ord:2},{id:'co_pyrosyn',name:'Pyrosyn',website:'',ord:3},{id:'co_proquant',name:'Proquant',website:'',ord:4}];
+const CO_SHARED_SEED={id:CO_SHARED,shared:true,address:'API Trio Office Tower - 901, Barsha First\nDubai, UAE',poBox:'454801',phone:'+971 4-399-5866',mobile:'+971 50 705 8837',email:''};
+const CO_ADDR=[['address','Address','textarea'],['poBox','PO Box'],['phone','Phone (T)'],['mobile','Mobile (M)'],['email','E-mail']]; // shared defaults, overridable per company
+async function coSeed(){S.companies=S.companies||[];for(const c of[CO_SHARED_SEED,...CO_SEED.map(c=>({logo:'',address:'',poBox:'',phone:'',mobile:'',email:'',footer:'',...c}))]){if(byId('companies',c.id))continue;const r={...c,createdAt:1,updatedAt:1};await DB.put('companies',r);S.companies.push(r)}}
+const coShared=()=>byId('companies',CO_SHARED)||CO_SHARED_SEED;
+const coList=()=>S.companies.filter(c=>!c.shared&&!c.deleted).sort((a,b)=>(a.ord||99)-(b.ord||99)||a.name.localeCompare(b.name));
+function coOf(p){if(typeof p==='string')p=byId('projects',p);return(p&&p.companyId&&byId('companies',p.companyId))||byId('companies',CO_DEFAULT)||coList()[0]||null}
+/* Effective details: company values, else the shared address. Without any company record: the old Settings company. */
+function coInfo(c){if(!c)return{name:S.settings.company||'',logo:S.settings.logo||'',website:'',footer:'',lines:String(S.settings.companyDetails||'').split('\n').filter(Boolean)};
+ const sh=coShared(),v=k=>String(c[k]||'').trim()||String(sh[k]||'').trim();const o={id:c.id,name:c.name||'',logo:c.logo||(c.id===CO_DEFAULT&&S.settings.logo)||'',website:String(c.website||'').trim(),footer:String(c.footer||'').trim()};CO_ADDR.forEach(([k])=>o[k]=v(k));
+ o.lines=[...o.address.split('\n').map(x=>x.trim()).filter(Boolean),o.poBox&&'PO Box '+o.poBox,o.phone&&'T '+o.phone,o.mobile&&'M '+o.mobile,o.email,o.website].filter(Boolean);return o}
+const coLine=co=>co.lines.join(' | ');
+const coName=p=>{const c=coOf(p);return c?c.name:(S.settings.company||'')};
+function coCanEdit(){if(!myEmail())return true;return S.projects.some(p=>!p.stub&&projRole(p).admin)}
+async function coSave(c){c.updatedAt=Math.max(Date.now(),(c.updatedAt||0)+1);const w=currentUser();if(w.name)c.updatedBy=w.name;await DB.put('companies',c);const i=S.companies.findIndex(x=>x.id===c.id);if(i>=0)S.companies[i]=c;else S.companies.push(c);Sync.schedule(1500);return c}
+const companyField=()=>({k:'companyId',label:'Inspecting company',type:'select',req:true,options:coList().map(c=>[c.id,c.name]),def:CO_DEFAULT});
+function coSettingsHTML(){const sh=coShared(),ed=coCanEdit(),list=coList();
+ return`<div class="card pad" style="margin-top:16px" id="co-card"><h2 style="margin-top:0;font-size:17px">Companies</h2>
+ <p class="muted small" style="margin-top:0">The inspecting company chosen on each project brands its reports (logo, name, address). Shared with everyone through the company Dropbox.${ed?'':' Only project admins can edit companies.'}</p>
+ <h3 class="co-h">Company address <span class="muted small">(used by every company unless overridden)</span></h3>
+ <form class="form-grid" onsubmit="return false" id="co-shared"><fieldset class="fs" ${ed?'':'disabled'}>${CO_ADDR.map(([k,l,t])=>t==='textarea'?`<label class="full"><span>${l}</span><textarea name="${k}" rows="2" data-change="co-shared">${esc(sh[k]||'')}</textarea></label>`:`<label><span>${l}</span><input name="${k}" value="${esc(sh[k]||'')}" data-change="co-shared"></label>`).join('')}</fieldset></form>
+ <div class="help">Shown on reports as: ${esc(coLine(coInfo({name:''}))||'–')}</div>
+ <div class="card list co-list" style="margin-top:12px">${list.map(c=>{const co=coInfo(c);return`<div class="row co-row" ${ed?`data-act="co-edit" data-id="${c.id}"`:''}><div class="thumb co-logo">${c.logo?`<img src="${esc(c.logo)}" alt="">`:`<b>${esc(c.name.slice(0,2).toUpperCase())}</b>`}</div><div class="grow"><div class="t">${esc(c.name)}</div><div class="meta"><span>${esc(co.website||'No website')}</span>${CO_ADDR.some(([k])=>String(c[k]||'').trim())?'<span class="badge pr-Medium">Own address</span>':''}${c.logo?'':'<span>No logo yet</span>'}${(n=>`<span>${n} project${n===1?'':'s'}</span>`)(S.projects.filter(p=>!p.stub&&coOf(p)===c).length)}</div></div>${ed?`<button class="btn sm" data-act="co-edit" data-id="${c.id}">${ic('edit')} Edit</button>`:''}</div>`}).join('')||'<div class="empty">No companies</div>'}</div>
+ ${ed?`<div class="actions" style="margin-top:10px"><button class="btn sm" data-act="co-new">${ic('plus')} Add company</button></div>`:''}</div>`}
+async function coEdit(c){const isNew=!c;const sh=coShared();
+ const f=[{k:'name',label:'Company name',req:true,full:true},{k:'website',label:'Website',ph:'e.g. www.example.com'},{k:'logo',label:'Logo (report cover and page header)',type:'image'},{k:'footer',label:'Report footer text (optional)',type:'textarea',full:true,rows:2,ph:'e.g. Registered in Dubai · Licence no. …'},
+  {k:'_n',type:'note',html:`<details class="co-adv" ${c&&CO_ADDR.some(([k])=>String(c[k]||'').trim())?'open':''}><summary>Advanced: own address for this company</summary><p class="help">Leave empty to use the shared company address (${esc(coLine(coInfo({name:''}))||'not set')}).</p><div class="form-grid">${CO_ADDR.map(([k,l,t])=>t==='textarea'?`<label class="full"><span>${l}</span><textarea name="${k}" rows="2" placeholder="${esc(sh[k]||'')}">${esc(c&&c[k]||'')}</textarea></label>`:`<label><span>${l}</span><input name="${k}" value="${esc(c&&c[k]||'')}" placeholder="${esc(sh[k]||'')}"></label>`).join('')}</div></details>`}];
+ const r=await modal({title:isNew?'Add company':'Edit company',wide:true,body:`<form class="form-grid" onsubmit="return false">${f.map(x=>fieldHTML(x,c&&c[x.k])).join('')}</form>`,
+  buttons:[{label:'Cancel',value:null},...(isNew?[]:[{label:'Delete',value:'del',cls:'danger'}]),{label:'Save',value:'ok',cls:'primary',validate:el=>{const i=el.querySelector('[name=name]');if(!i.value.trim()){i.focus();toast('Company name is required');return false}return true}}],
+  onOpen:el=>{const box=el.querySelector('[data-img]'),inp=box.querySelector('input[type=file]'),img=box.querySelector('img'),clr=box.querySelector('[data-clear]');
+   inp.onchange=async()=>{const fl=inp.files[0];if(!fl)return;const rr=await resizeImage(await fileToDataURL(fl),600,'image/png');box.dataset.val=rr.data;img.src=rr.data;img.hidden=false;clr.hidden=false};clr.onclick=()=>{box.dataset.val='';img.hidden=true;clr.hidden=true}},
+  collect:(el,v)=>{if(v==='del')return{del:true};const o={};['name','website','footer',...CO_ADDR.map(x=>x[0])].forEach(k=>o[k]=el.querySelector(`[name="${k}"]`).value.trim());o.logo=el.querySelector('[data-img]').dataset.val||'';return o}});
+ if(!r)return;if(r.del){const n=S.projects.filter(p=>!p.stub&&p.companyId===c.id).length;if(!await confirmBox(`Delete company “${c.name}”?${n?` ${n} project${n>1?'s':''} still use it (their reports keep it until you choose another company).`:''}`))return;c.deleted=true;await coSave(c);toast('Company deleted');return render()}
+ if(isNew)c={id:'co_'+uid(),ord:50,createdAt:Date.now()};Object.assign(c,r);delete c.deleted;await coSave(c);toast('Company saved');render()}
+Object.assign(ACT,{'co-edit':el=>{if(coCanEdit())return coEdit(byId('companies',el.dataset.id))},'co-new':()=>{if(coCanEdit())return coEdit(null)}});
+Object.assign(CHG,{'co-shared':async el=>{if(!coCanEdit())return;const sh={...coShared()};sh[el.name]=el.value.trim();await coSave(sh);toast('Saved',1000)}});
+Object.assign(Sync,{
+ coPath(){return Dbx.p('/_registry/companies.json')},
+ coHashOf(list){const canon=r=>Object.fromEntries(Object.keys(r).sort().map(k=>[k,r[k]]));return JSON.stringify(list.filter(r=>r&&r.id).map(canon).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))},
+ async coSync(){let m=null,changed=false;try{m=await Dbx.rpc('files/get_metadata',{path:this.coPath()})}catch(e){if(e.kind!=='notfound'){if(['offline','auth'].includes(e.kind))throw e;console.warn('Companies read failed',e.message);return false}}
+  if(m&&m.rev!==SM.coRev){try{const{blob,meta}=await Dbx.download(m.path_lower||this.coPath());const b=JSON.parse(await blob.text());if(b&&b.format==='sap-companies-1'&&Array.isArray(b.companies)){
+    for(const r of b.companies){if(!r||!r.id)continue;const loc=byId('companies',r.id);if(!loc||(r.updatedAt||0)>(loc.updatedAt||0)){await DB.put('companies',r);const i=S.companies.findIndex(x=>x.id===r.id);if(i>=0)S.companies[i]=r;else S.companies.push(r);changed=true}}
+    SM.coRev=(meta&&meta.rev)||m.rev;SM.coHash=this.coHashOf(b.companies);this.saveMeta()}}catch(e){if(['offline','auth'].includes(e.kind))throw e;console.warn('Companies read failed',e.message);return changed}}
+  const h=this.coHashOf(S.companies);if(h===SM.coHash)return changed;
+  try{const up=await Dbx.upload(this.coPath(),new Blob([JSON.stringify({format:'sap-companies-1',savedAt:new Date().toISOString(),companies:JSON.parse(h)})],{type:'application/json'}),m?{'.tag':'update',update:m.rev}:{'.tag':'add'});SM.coRev=up.rev;SM.coHash=h;this.saveMeta()}
+  catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind==='conflict'){SM.coRev=null;this._again=true}else console.warn('Companies write failed',e.message)}return changed}});
+
+/* ---- report branding (PDF cover logos, page header, footer) ---- */
+async function pdfLogo(doc,data,x,y,bw,bh,alias,left){const s=await imgSize(data);const sc=Math.min(bw/s.w,bh/s.h);const w=s.w*sc,h=s.h*sc;doc.addImage(data,imgFmt(data),left?x:x+(bw-w)/2,y+(bh-h)/2,w,h,alias,'FAST');return w}
+/* cover band: company logo (white box) top right, project / client logo under it. Returns the width reserved on the right. */
+async function pdfCoverLogos(doc,co,p,PW,M){const L=co.logo,C=p.logo&&p.logo!==L?p.logo:'';if(!L&&!C)return 0;doc.setFillColor(255,255,255);
+ if(L){doc.roundedRect(PW-M-44,12,44,30,2,2,'F');await pdfLogo(doc,L,PW-M-41,14,38,26,'co-logo')}
+ if(C){const y0=L?46:12,h0=L?22:30;doc.roundedRect(PW-M-44,y0,44,h0,2,2,'F');await pdfLogo(doc,C,PW-M-41,y0+2,38,h0-4,'client-logo')}return 52}
+async function pdfChrome(doc,co,{M,left,font,T}){const n=doc.getNumberOfPages(),line=coLine(co);for(let i=1;i<=n;i++){doc.setPage(i);const w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();
+  if(i>1){let x=M;if(co.logo){try{x+=await pdfLogo(doc,co.logo,M,4.2,24,7.5,'co-logo',true)+2.5}catch(e){}}font(8,'bold',[71,85,105]);if(co.name)T(co.name,x,9.6);font(7.5,'normal',[130,140,155]);T(doc.splitTextToSize(left,w/2-M)[0],w-M,9.6,{align:'right'});doc.setDrawColor(226,232,240);doc.setLineWidth(.3);doc.line(M,12.6,w-M,12.6);
+   doc.line(M,h-12.5,w-M,h-12.5)}
+  font(7.5,'normal',[130,140,155]);T(doc.splitTextToSize(left,w/2-M-10)[0],M,h-8);const mid=[co.name,co.footer].filter(Boolean).join(' · ');if(mid)T(doc.splitTextToSize(mid,w/3)[0],w/2,h-8,{align:'center'});T(`Page ${i} of ${n}`,w-M,h-8,{align:'right'});
+  if(line){font(6.5,'normal',[150,158,170]);T(doc.splitTextToSize(line,w-2*M)[0],w/2,h-4,{align:'center'})}}}
 
 </script>
 </body>
