@@ -1449,7 +1449,12 @@ async function importBackup(file){let data;try{data=JSON.parse(await file.text()
 const DROPBOX_APP_KEY="gh6rb9jz9pgcnwc";
 const DROPBOX_ROOT_FOLDER="/Site Inspection";
 const DROPBOX_TEAM_ID="";
-const ALLOWED_EMAIL_DOMAINS="syden.me";
+const ALLOWED_EMAIL_DOMAINS="syden.me,riceperryellis.com";
+/* company e-mail domains (build var ALLOWED_EMAIL_DOMAINS="syden.me,riceperryellis.com") – used for Dropbox sign-in, team members and texts */
+const allowedDomains=()=>String(ALLOWED_EMAIL_DOMAINS||'').split(/[,;\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+const domainOk=email=>{const d=allowedDomains();return!d.length||d.includes(String(email||'').trim().toLowerCase().split('@').pop())};
+const domainsText=html=>{const d=allowedDomains().map(x=>html?'<b>@'+esc(x)+'</b>':'@'+x);return d.length<2?d.join(''):d.slice(0,-1).join(', ')+' or '+d[d.length-1]}; // "@syden.me or @riceperryellis.com"
+const teamIds=()=>String(DROPBOX_TEAM_ID||'').split(/[,;\s]+/).filter(Boolean);
 const KEY_PLACEHOLDER='YOUR_DROPBOX_APP_KEY';
 const NOACCESS_MSG="You don't have access to the company Site Inspection folder. Ask your admin to share it with you.";
 const READONLY_MSG="You only have view access to the company Site Inspection folder, so your changes can't be saved to Dropbox. Ask your admin for edit access.";
@@ -1489,9 +1494,8 @@ const Dbx={loc:null,
   if(saved.grant){const done=busy('Updating Dropbox permissions…');try{await this.exchangeGrant(q.get('code'),saved.v,saved.ru,saved.grant)}catch(e){alertBox('Could not update Dropbox permissions: '+e.message,'Dropbox permission')}finally{done()}return true}
   const done=busy('Connecting to Dropbox…');try{await this.exchange(q.get('code'),saved.v,saved.ru)}catch(e){Welcome.fail('Dropbox connection failed: '+e.message)||alertBox('Dropbox connection failed: '+e.message)}finally{done()}return true},
  accountProblem(a){if(!a.team)return`Site Inspection only works with your company Dropbox account. You signed in with a personal Dropbox account${a.email?' ('+a.email+')':''}. Please connect again and sign in with your work account.`;
-  if(DROPBOX_TEAM_ID&&a.team.id!==DROPBOX_TEAM_ID)return`The Dropbox account ${a.email||''} belongs to a different team (“${a.team.name||a.team.id}”). Please sign in with your company Dropbox account.`;
-  const doms=ALLOWED_EMAIL_DOMAINS.split(',').map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
-  if(doms.length&&!doms.includes(String(a.email||'').split('@').pop().toLowerCase()))return`The Dropbox account ${a.email||''} is not a company account (allowed: ${doms.map(d=>'@'+d).join(', ')}). Please sign in with your work account.`;return null},
+  if(teamIds().length&&!teamIds().includes(a.team.id))return`The Dropbox account ${a.email||''} belongs to a different team (“${a.team.name||a.team.id}”). Please sign in with your company Dropbox account.`;
+  if(!domainOk(a.email))return`The Dropbox account ${a.email||''} is not a company account (allowed: ${domainsText()}). Please sign in with your company account (${domainsText()}).`;return null},
  async exchange(code,verifier,ru){const body=new URLSearchParams({code,grant_type:'authorization_code',code_verifier:verifier,client_id:this.key()});if(ru)body.set('redirect_uri',ru);
   let r;try{r=await fetch(DBX_TOKEN,{method:'POST',body})}catch(e){throw new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.access_token)throw new DbxErr(j.error_description||j.error||('Token request failed ('+r.status+')'),'auth',r.status);
@@ -1695,7 +1699,7 @@ const Welcome={
  fail(msg){if(!this.flow())return false;this.set({stage:'error',msg});render();return true}};
 const WL_CHECK='<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
 function viewWelcome(){const s=Welcome.st()||{},con=Dbx.connected(),a=(Dbx.tok()||{}).account||{},folder=rootName();
- const doms=ALLOWED_EMAIL_DOMAINS.split(',').map(x=>x.trim().replace(/^@/,'')).filter(Boolean),acct=doms.length?doms.map(d=>`<b>@${esc(d)}</b>`).join(' or ')+' company':'<b>company</b>';
+ const acct=allowedDomains().length?`your company account (${domainsText(true)})`:'your <b>company</b> account';
  const skip=`<div class="wl-foot"><button class="wl-skip" data-act="welcome-skip">Continue offline without Dropbox</button><div class="help">You can connect later in Settings. Offline data stays on this device only.</div></div>`;
  let body;
  if(con&&s.stage==='connecting')body=`<div class="card wl-card" id="wl-connecting"><div class="wl-badge"><span class="wl-spin"></span></div><h2>Connecting…</h2><p class="muted">Checking your access to the shared “${esc(folder)}” folder.</p></div>`;
@@ -1703,7 +1707,7 @@ function viewWelcome(){const s=Welcome.st()||{},con=Dbx.connected(),a=(Dbx.tok()
   body=`<div class="card wl-card" id="wl-ok"><div class="wl-badge ok">${WL_CHECK}</div><h2>You're connected</h2><p>Your team's projects will appear here.${a.email?`<br><span class="muted small">Signed in as ${esc(a.email)}</span>`:''}</p><button class="btn primary wl-big" data-act="welcome-done">Open projects</button></div>`}
  else if(con&&s.stage==='noaccess')body=`<div class="card wl-card" id="wl-noaccess"><div class="wl-msg bad">${esc(s.msg||NOACCESS_MSG)}</div><p class="muted small" style="margin:0 0 14px">Signed in as ${esc(a.email||a.name||'Dropbox user')}. Once your admin has shared the “${esc(folder)}” folder with you, tap Check again.</p><button class="btn primary wl-big" data-act="welcome-recheck">Check again</button><button class="btn wl-big" data-act="welcome-switch">Use a different Dropbox account</button></div>${skip}`;
  else body=`<div class="card wl-card" id="wl-connect">${s.stage==='error'&&s.msg?`<div class="wl-msg bad">${esc(s.msg)}</div>`:''}
-  <div class="wl-step"><span class="wl-num">1</span><div><h2>Connect your company Dropbox</h2><p class="muted">Sign in with your ${acct} Dropbox account.</p></div></div>
+  <div class="wl-step"><span class="wl-num">1</span><div><h2>Connect your company Dropbox</h2><p class="muted">Sign in to Dropbox with ${acct}.</p></div></div>
   <button class="btn primary wl-big" data-act="welcome-connect"><span class="wl-dbx">${DBX_LOGO}</span>Connect Dropbox</button>
   <ul class="wl-notes"><li><b>Only the shared folder.</b> The app only uses the company “${esc(folder)}” folder – nothing else in your Dropbox.</li><li><b>What happens next:</b> your team's projects, issues and photos sync automatically, and PDF reports are saved to the shared folder.</li></ul></div>${skip}`;
  return`<div class="welcome"><div class="wl-head"><span class="wl-logo">${WL_CHECK}</span><h1>Site Inspection</h1><p>Log site inspections, snags and photos on site and share them with your team.</p></div>${body}</div>`}
@@ -2083,7 +2087,7 @@ const myName=()=>currentUser().name||localStorage.getItem('sap.me.name')||'';
 const teamOn=p=>!!(p&&Array.isArray(p.team)&&p.team.length);
 const teamAdmins=p=>(p&&p.team||[]).filter(m=>m.role==='admin'||eqEmail(m.email,p.ownerEmail));
 const desigOf=k=>DESIGNATIONS[k]||DESIGNATIONS.VIEW;
-const emailDomains=()=>ALLOWED_EMAIL_DOMAINS.split(',').map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+const emailDomains=()=>allowedDomains();
 const ROLE_MEMO=new Map();
 /* mode: open (no team) | admin | member | none (not on the team). trades: null = all trades */
 function projRole(p){if(typeof p==='string')p=byId('projects',p);const e=myEmail();if(!p||!teamOn(p))return{mode:'open',admin:true,trades:null,ro:false,email:e};
@@ -2197,14 +2201,14 @@ function viewProjectTeam(p,R){const d=p.dbx,st=Sync.proj[p.id];const adm=R.admin
   :`<p class="help" style="margin-top:0">${esc(roleScopeText(p))}</p><div class="list card">${rows}</div>
   ${adm?`<form class="form-grid team-add" onsubmit="return false" id="team-add"><label><span>E-mail *</span><input name="email" type="email" placeholder="name@${esc(doms[0]||'company.com')}" autocomplete="off"></label><label><span>Name</span><input name="name" placeholder="Optional"></label>
    <label><span>Designation</span><select name="designation">${opts('MEP')}</select></label><label><span>Role</span><select name="role"><option value="member">Member</option><option value="admin">Admin</option></select></label>
-   <div class="full actions"><button class="btn primary" data-act="team-add" data-id="${p.id}">${ic('plus')} Add to team</button><span class="help">${doms.length?'Only '+doms.map(x=>'@'+x).join(', ')+' accounts. ':''}They see this project after their next sync${pfLinked(p)?', through their own Dropbox access to the project folder':''}.</span></div></form>`:''}`}</div>
+   <div class="full actions"><button class="btn primary" data-act="team-add" data-id="${p.id}">${ic('plus')} Add to team</button><span class="help">${doms.length?'Only company accounts ('+esc(domainsText())+'). ':''}They see this project after their next sync${pfLinked(p)?', through their own Dropbox access to the project folder':''}.</span></div></form>`:''}`}</div>
  <div class="card pad small muted" style="margin-top:14px"><b>Designations:</b> ${Object.values(DESIGNATIONS).map(v=>`<b>${esc(v.label)}</b> = ${esc(v.trades?v.trades.join(' + '):v.ro?'read-only, all trades':'all trades')}`).join(' · ')}. Admins see and manage everything.</div>`}
 async function teamSave(p,fn,msg){if(!projRole(p).admin)return alertBox('Only a project admin can change the team.');fn(p);await save('projects',p);toast(msg||'Team saved',1400);render()}
 Object.assign(ACT,{
  'team-start':async el=>{const p=byId('projects',el.dataset.id);const e=myEmail();if(!e)return alertBox('Connect Dropbox first so the app knows who you are.');
   await teamSave(p,p=>{p.ownerEmail=p.ownerEmail||e;p.ownerName=p.ownerName||myName();p.team=[{email:e,name:myName(),designation:'ALL',role:'admin',addedAt:Date.now(),addedBy:e}]},'Team created – you are the admin')},
  'team-add':async el=>{const p=byId('projects',el.dataset.id),f=$('#team-add');const v=k=>f.querySelector(`[name=${k}]`).value.trim();const email=v('email').toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return alertBox('Enter a valid e-mail address.','Team');const doms=emailDomains();if(doms.length&&!doms.includes(email.split('@').pop()))return alertBox(`Only company accounts can be added (${doms.map(x=>'@'+x).join(', ')}).`,'Team');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return alertBox('Enter a valid e-mail address.','Team');if(!domainOk(email))return alertBox(`Only company accounts can be added (${domainsText()}).`,'Team');
   if((p.team||[]).some(m=>eqEmail(m.email,email)))return alertBox(email+' is already on the team.','Team');
   await teamSave(p,p=>{p.team=[...(p.team||[]),{email,name:v('name'),designation:v('designation'),role:v('role')==='admin'?'admin':'member',addedAt:Date.now(),addedBy:myEmail()}]},'Added '+email)},
  'team-remove':async el=>{const p=byId('projects',el.dataset.id);const email=el.dataset.email;if(eqEmail(email,p.ownerEmail))return;if(!await confirmBox(`Remove ${email} from the project team? They will no longer see it in the app (their Dropbox access to the folder is not changed).`,'Remove'))return;
