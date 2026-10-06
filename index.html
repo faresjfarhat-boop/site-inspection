@@ -318,6 +318,9 @@ body.wl-mode .topnav{display:none}
 .co-row{cursor:default}.co-row[data-act]{cursor:pointer}
 .form-note{min-width:0}.co-adv summary{cursor:pointer;font-weight:600;color:var(--acc);font-size:14px}.co-adv .form-grid{margin-top:8px}
 .img-field [hidden]{display:none}
+/* HEIC conversion progress (non-blocking, above busy overlays) */
+.heic-pill{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:600;background:#0f172a;color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap}
+.heic-pill .muted{color:#cbd5e1;font-weight:500}.heic-pill .spin{border-color:rgba(255,255,255,.35);border-top-color:#fff}
 
 </style>
 </head>
@@ -962,12 +965,12 @@ function modal({title,body,buttons=[{label:'Cancel',value:null},{label:'Save',va
   el.addEventListener('click',e=>{if((backdrop&&e.target===el)||e.target.closest('[data-x]'))return close(null);const b=e.target.closest('[data-i]');if(!b||!el.contains(b)||b.closest('.modal-back')!==el)return;const btn=buttons[+b.dataset.i];if(btn.value==null)return close(null);if(btn.validate&&!btn.validate(el))return;close(collect?collect(el,btn.value):btn.value)});
   el._close=close;onOpen&&onOpen(el,close);const f=el.querySelector('input:not([type=file]):not([type=checkbox]),textarea');if(f&&!('ontouchstart' in window))setTimeout(()=>f.focus(),30)})}
 const confirmBox=(msg,ok='Delete',title='Please confirm')=>modal({title,body:`<p style="margin:0">${esc(msg)}</p>`,buttons:[{label:'Cancel',value:null},{label:ok,value:true,cls:ok==='Delete'?'danger':'primary'}]});
-const alertBox=(msg,title='Notice')=>modal({title,body:`<p style="margin:0">${esc(msg)}</p>`,buttons:[{label:'OK',value:true,cls:'primary'}]});
+const alertBox=(msg,title='Notice')=>modal({title,body:`<p style="margin:0;white-space:pre-line">${esc(msg)}</p>`,buttons:[{label:'OK',value:true,cls:'primary'}]});
 function fieldHTML(f,v){const lab=`<span>${esc(f.label)}${f.req?' *':''}</span>`,full=f.full?'full':'';
  if(f.type==='textarea')return`<label class="${full}">${lab}<textarea name="${f.k}" rows="${f.rows||3}" placeholder="${esc(f.ph||'')}">${esc(v||'')}</textarea></label>`;
  if(f.type==='select')return`<label class="${full}">${lab}<select name="${f.k}">${f.options.map(o=>{const[ov,ol]=Array.isArray(o)?o:[o,o||'—'];return`<option ${ov===(v??f.def)?'selected':''} value="${esc(ov)}">${esc(ol)}</option>`}).join('')}</select></label>`;
  if(f.type==='note')return`<div class="full form-note">${f.html||esc(f.label)}</div>`;
- if(f.type==='image')return`<div class="full"><label>${lab}</label><div class="img-field" data-img="${f.k}" data-val="${esc(v||'')}"><img ${v?`src="${esc(v)}"`:'hidden'} alt=""><label class="btn sm">${ic('upload')} Choose image<input type="file" accept="image/*" hidden></label><button type="button" class="btn sm ghost danger" data-clear ${v?'':'hidden'}>Remove</button></div></div>`;
+ if(f.type==='image')return`<div class="full"><label>${lab}</label><div class="img-field" data-img="${f.k}" data-val="${esc(v||'')}"><img ${v?`src="${esc(v)}"`:'hidden'} alt=""><label class="btn sm">${ic('upload')} Choose image<input type="file" accept="image/*,.heic,.heif" hidden></label><button type="button" class="btn sm ghost danger" data-clear ${v?'':'hidden'}>Remove</button></div></div>`;
  if(f.type==='signature')return`<div class="full"><label>${lab}</label><canvas class="sigpad" data-sig="${f.k}" data-val="${esc(v||'')}"></canvas><div style="display:flex;justify-content:space-between;margin-top:4px"><span class="help">Sign with finger / mouse</span><button type="button" class="btn sm ghost" data-sigclear="${f.k}">Clear</button></div></div>`;
  return`<label class="${full}">${lab}<input name="${f.k}" type="${f.type||'text'}" value="${esc(v??'')}" placeholder="${esc(f.ph||'')}" ${f.list?`list="${f.list}"`:''}></label>`}
 function sigPad(cv){const r=cv.getBoundingClientRect();const dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;const x=cv.getContext('2d');x.scale(dpr,dpr);x.lineWidth=2.2;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#0f172a';
@@ -979,7 +982,7 @@ async function formModal(title,fields,vals={},opts={}){
  return modal({title,wide:opts.wide,body:`<form class="form-grid" onsubmit="return false">${fields.map(f=>fieldHTML(f,vals[f.k])).join('')}</form>${opts.extra||''}`,
   buttons:[{label:'Cancel',value:null},{label:opts.ok||'Save',value:'ok',cls:'primary',validate:el=>{for(const f of fields)if(f.req){const i=el.querySelector(`[name="${f.k}"]`);if(i&&!i.value.trim()){i.focus();toast(f.label+' is required');return false}}return true}}],
   onOpen:el=>{$$('[data-img]',el).forEach(box=>{const inp=box.querySelector('input[type=file]'),img=box.querySelector('img'),clr=box.querySelector('[data-clear]');
-    inp.onchange=async()=>{const f=inp.files[0];if(!f)return;const r=await resizeImage(await fileToDataURL(f),500,'image/png');box.dataset.val=r.data;img.src=r.data;img.hidden=false;clr.hidden=false};
+    inp.onchange=async()=>{const f=inp.files[0];if(!f)return;const r=await resizeImage(await imgDataURL(f),500,'image/png');box.dataset.val=r.data;img.src=r.data;img.hidden=false;clr.hidden=false};
     clr.onclick=()=>{box.dataset.val='';img.hidden=true;clr.hidden=true}});
    $$('[data-sig]',el).forEach(sigPad);$$('[data-sigclear]',el).forEach(b=>b.onclick=()=>el.querySelector(`[data-sig="${b.dataset.sigclear}"]`)._clear())},
   collect:el=>{const o={};for(const f of fields){if(f.type==='note')continue;if(f.type==='image')o[f.k]=el.querySelector(`[data-img="${f.k}"]`).dataset.val||'';else if(f.type==='signature'){const c=el.querySelector(`[data-sig="${f.k}"]`);o[f.k]=c.dataset.dirty?c.toDataURL('image/png'):(c.dataset.val||'')}else o[f.k]=el.querySelector(`[name="${f.k}"]`).value.trim()}return o}})}
@@ -1054,7 +1057,7 @@ function viewProject(id,params={}){const p=byId('projects',id);if(!p)return notF
  ${statsHTML(items,'p-'+id)}${tradeHTML(items,'p-'+id)}
  <div class="section"><h2>Inspections</h2>${R.ro?'':`<button class="btn primary sm" data-act="new-audit" data-id="${id}">${ic('plus')} New inspection</button>`}</div>
  ${audits.length?`<div class="card list">${audits.map(a=>{const it=visAuditItems(a.id),op=it.filter(i=>i.status!=='Closed').length,cl=S.checklists.filter(c=>c.auditId===a.id).length;return`<a class="row" href="#/audit/${a.id}"><div class="thumb" style="background:var(--accl);color:var(--acc)">${ic('clip')}</div><div class="grow"><div class="t">${esc(a.title)}</div><div class="meta"><span>${ic('cal')}${fmtDate(a.date)}</span>${a.inspector?`<span>${ic('user')}${esc(a.inspector)}</span>`:''}${a.weather?`<span>${esc(a.weather)}</span>`:''}${cl?`<span>${cl} checklist${cl>1?'s':''}</span>`:''}</div></div><div class="ir-badges"><span class="badge st-Open">${op} open</span><span class="badge pr-Low">${it.length} total</span></div></a>`}).join('')}</div>`:emptyHTML('No inspections yet','An inspection is a site visit. Add one to start logging issues.')}
- <div class="section"><h2>Drawings & floor plans</h2><label class="btn sm" ${R.ro?'hidden':''}>${ic('upload')} Upload drawing<input type="file" accept="image/*,application/pdf" hidden data-change="upload-drawing" data-id="${id}"></label></div>
+ <div class="section"><h2>Drawings & floor plans</h2><label class="btn sm" ${R.ro?'hidden':''}>${ic('upload')} Upload drawing<input type="file" accept="image/*,.heic,.heif,application/pdf" hidden data-change="upload-drawing" data-id="${id}"></label></div>
  ${drs.length?`<div class="dgrid">${drs.map(d=>{const n=items.filter(i=>i.pin&&i.pin.drawingId===d.id).length;return`<div class="card dcard" data-act="go" data-href="#/drawing/${d.id}"><div class="dimg"><img data-photo="${d.imageId}" alt=""></div><div class="dname"><span>${esc(d.name)}</span><span class="badge pr-Medium">${ic('pin')}${n}</span></div></div>`}).join('')}</div>`:`<div class="card empty">Upload a floor plan / drawing (image or PDF) to drop numbered pins for issues.</div>`}
  <div class="section"><h2>All issues in project</h2></div>${items.length?itemListHTML('p-'+id,items,true):`<div class="card empty">No issues yet. Open an inspection to add issues.</div>`}`}
 
@@ -1156,14 +1159,19 @@ async function editTemplate(t){const txt=t?t.questions.map(q=>(q.section?'# ':''
  const r=await formModal(t?'Edit template':'New template',[{k:'name',label:'Template name',req:true,full:true},{k:'description',label:'Description',full:true},{k:'q',label:'Questions – one per line. Start a line with # to make a section heading.',type:'textarea',rows:14,full:true}],{name:t?.name,description:t?.description,q:txt},{wide:true});if(!r)return;
  const old=t?t.questions:[];const qs=r.q.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const sec=l.startsWith('#');const text=l.replace(/^#+\s*/,'');const prev=old.find(o=>o.text===text&&!!o.section===sec);return{id:prev?prev.id:uid(),text,...(sec?{section:true}:{})}});
  await save('templates',{...(t||{id:uid()}),name:r.name,description:r.description,questions:qs});toast('Template saved');render()}
-async function addPhotos(it,files){const wasBlank=!it.title&&!it.category&&!(it.photos||[]).length&&!it.description;const done=busy('Adding photos…');const first=(it.photos||[]).length;try{for(const f of files){const r=await resizeImage(await fileToDataURL(f),1600);const p=await putPhoto({id:uid(),...r,createdAt:Date.now()});it.photos=it.photos||[];it.photos.push(p.id);if(f.name)(it.photoSrc=it.photoSrc||{})[p.id]=f.name}await save('items',it);UI.ivSel={id:it.id,k:first};toast(`${files.length} photo${files.length>1?'s':''} added`)}catch(e){console.error(e);alertBox('Could not add photo: '+e.message)}finally{done()}render();
+/* photos → 1600px JPEG (HEIC/HEIF converted first); one bad file doesn't stop the others; photoSrc keeps the original file name */
+async function addPhotos(it,files){const wasBlank=!it.title&&!it.category&&!(it.photos||[]).length&&!it.description;const done=busy('Adding photos…');const first=(it.photos||[]).length;const errs=[];let n=0;
+ try{for(const f of files){let r;try{r=await resizeImage(await imgDataURL(f),1600)}catch(e){errs.push(/HEIC|“/.test(e.message)?e.message:`“${f.name||'photo'}” could not be read as an image (${e.message}).`);continue}
+   const p=await putPhoto({id:uid(),...r,createdAt:Date.now()});it.photos=it.photos||[];it.photos.push(p.id);if(f.name)(it.photoSrc=it.photoSrc||{})[p.id]=f.name;n++}
+  if(n){await save('items',it);UI.ivSel={id:it.id,k:first};toast(`${n} photo${n>1?'s':''} added`)}}catch(e){console.error(e);errs.push(e.message)}finally{done()}render();
+ if(errs.length)alertBox((n?`${n} photo${n>1?'s were':' was'} added. `:'')+(errs.length>1?`${errs.length} files could not be added:\n\n`:'')+errs.join('\n\n'),'Could not add photo');
  if(wasBlank&&(it.photos||[]).length&&AI.enabled()&&AI.auto())AI.photo(it.id,it.photos[0],{auto:true})}
 let pdfWorkerSet=false;
 async function pdfToImage(file){if(!window.pdfjsLib)throw new Error('PDF support library not available');if(!pdfWorkerSet){const t=$('#pdfjs-worker');if(t&&t.textContent.length>1000)pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t.textContent],{type:'text/javascript'}));pdfWorkerSet=true}
  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;let n=1;
  if(pdf.numPages>1){const r=await formModal('Choose PDF page',[{k:'page',label:`This PDF has ${pdf.numPages} pages. Page to import:`,type:'number',full:true}],{page:1},{ok:'Import'});n=clamp(parseInt(r&&r.page)||1,1,pdf.numPages)}
  const page=await pdf.getPage(n);const v0=page.getViewport({scale:1});const vp=page.getViewport({scale:Math.min(4,3000/Math.max(v0.width,v0.height))});const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);await page.render({canvasContext:x,viewport:vp}).promise;return c.toDataURL('image/jpeg',.88)}
-async function uploadDrawing(pid,file){const done=busy('Importing drawing…');try{const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);const src=isPdf?await pdfToImage(file):await fileToDataURL(file);const r=await resizeImage(src,3000,'image/jpeg',.88);const ph=await putPhoto({id:uid(),...r,kind:'drawing'});
+async function uploadDrawing(pid,file){const done=busy('Importing drawing…');try{const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);const src=isPdf?await pdfToImage(file):await imgDataURL(file);const r=await resizeImage(src,3000,'image/jpeg',.88);const ph=await putPhoto({id:uid(),...r,kind:'drawing'});
  const d=await save('drawings',{id:uid(),projectId:pid,name:file.name.replace(/\.[^.]+$/,'')||'Drawing',imageId:ph.id,w:r.w,h:r.h});done();location.hash='#/drawing/'+d.id}catch(e){done();console.error(e);alertBox('Could not import drawing: '+e.message)}}
 
 /* ===== Actions ===== */
@@ -1228,7 +1236,7 @@ const CHG={
   await save('items',it);toast('Saved',1000);clsRefresh(it,k==='defectType'&&v===TAX_OTHER?'defectText':null)},
  'cl-comment':async el=>{const c=byId('checklists',el.dataset.cl);c.questions.find(x=>x.id===el.dataset.q).comment=el.value;await save('checklists',c);toast('Saved',900)},
  setting:async el=>{if(el.name==='inspector'){localStorage.setItem('sap.inspector',el.value.trim());toast('Saved',900);return}S.settings[el.name]=el.name==='categories'?el.value.split('\n').map(s=>s.trim()).filter(Boolean):el.value;await saveSettings();toast('Settings saved',1000)},
- 'setting-logo':async el=>{const f=el.files[0];if(!f)return;S.settings.logo=(await resizeImage(await fileToDataURL(f),500,'image/png')).data;await saveSettings();render()},
+ 'setting-logo':async el=>{const f=el.files[0];if(!f)return;S.settings.logo=(await resizeImage(await imgDataURL(f),500,'image/png')).data;await saveSettings();render()},
  'dbx-key':el=>{const v=el.value.trim();if(v)localStorage.setItem('sap.dbx.keyOverride',v);else localStorage.removeItem('sap.dbx.keyOverride');toast('App key saved',1200);render()},
  'dbx-opt':el=>{Dbx.setPref(el.name,el.checked);toast('Saved',900);if(el.checked)Sync.schedule(500)},
  restore:el=>{const f=el.files[0];if(f)importBackup(f);el.value=''}};
@@ -1814,11 +1822,11 @@ const AI={
    buttons:[{label:'Cancel',value:null},...(has?[{label:'Replace description',value:'replace'}]:[]),{label:has?'Append':'Add to description',value:'append',cls:'primary'}],collect:(el,v)=>v&&{v,t:el.querySelector('[name=t]').value.trim()}});
   if(!r||!r.t)return;const cur=byId('items',it.id)||it;cur.description=r.v==='replace'||!has?r.t:cur.description.replace(/\s+$/,'')+'\n\n'+r.t;await save('items',cur);toast(r.v==='replace'?'Description replaced':'Added to description');render()},
  async snap(auditId,file){const done=busy('Adding photo…');let it,pid;
-  try{it=await newItem(auditId);const r=await resizeImage(await fileToDataURL(file),1600);const p=await putPhoto({id:uid(),...r,createdAt:Date.now()});pid=p.id;it.photos=[pid];await save('items',it)}catch(e){done();return alertBox('Could not add photo: '+e.message)}
+  try{const r=await resizeImage(await imgDataURL(file),1600);it=await newItem(auditId);const p=await putPhoto({id:uid(),...r,createdAt:Date.now()});pid=p.id;it.photos=[pid];if(file.name)it.photoSrc={[pid]:file.name};await save('items',it)}catch(e){done();return alertBox('Could not add photo: '+e.message)}
   done();location.hash='#/item/'+it.id;render();return this.photo(it.id,pid,{snap:true})}};
 function aiBarHTML(i){if(!AI.enabled()||projRole(i.projectId).ro)return'';const mic=AI.canRecord();
  return`<div class="ai-bar"><span class="ai-lbl">${AI_ICON.spark}AI assistant</span>${mic?`<button type="button" class="btn sm" data-act="ai-voice" data-mode="note" data-id="${i.id}">${AI_ICON.mic}Voice note</button><button type="button" class="btn sm" data-act="ai-voice" data-mode="issue" data-id="${i.id}">${AI_ICON.talk}Speak full issue</button>`:''}${(i.photos||[]).length?`<button type="button" class="btn sm" data-act="ai-photo" data-id="${i.id}" data-ph="${i.photos[0]}">${AI_ICON.spark}Analyze photo</button>`:''}</div>`}
-const aiSnapHTML=a=>AI.enabled()?`<label class="btn ai-snap">${AI_ICON.spark}<span class="lbl">Snap & detect</span><input type="file" accept="image/*" capture="environment" hidden data-change="ai-snap" data-id="${a.id}"></label>`:'';
+const aiSnapHTML=a=>AI.enabled()?`<label class="btn ai-snap">${AI_ICON.spark}<span class="lbl">Snap & detect</span><input type="file" accept="image/*,.heic,.heif" capture="environment" hidden data-change="ai-snap" data-id="${a.id}"></label>`:'';
 const aiPhotoBtn=(id,ph)=>AI.enabled()?`<button data-act="ai-photo" data-id="${id}" data-ph="${ph}" title="Analyze with AI">${AI_ICON.spark} Analyze</button>`:'';
 function aiSettingsHTML(){if(!AI_RELAY_URL)return'';const on=AI.enabled();
  return`<div class="card pad" style="margin-top:16px" id="ai-card"><h2 style="margin-top:0;font-size:17px;display:flex;align-items:center;gap:8px">${AI_ICON.spark}AI assistant</h2>
@@ -1835,9 +1843,8 @@ Object.assign(CHG,{
  State lives in memory (IMP) for one inspection at a time. Files are referenced (File handles / Dropbox paths), thumbnails are
  generated lazily when visible, full images are decoded one at a time (1600px JPEG kept for the issue, 1024px sent to the AI). */
 const IMP_CAP=200,IMP_SCAN_MAX=5000,IMP_IMG=/\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/i,IMP_HEIC=/\.(heic|heif)$/i;
-const IMP_HEIC_NOTE="HEIC photo – this browser can't read it, so it will be skipped. Export it as JPEG (or use Safari on iPhone/Mac).";
 const IMP_LINK_RE=/^https:\/\/(www\.)?dropbox\.com\/(s|sh|scl\/fi|scl\/fo)\/\S+$/i;
-let IMP=null,impHeicOK=null;
+let IMP=null;
 const impIsIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const impDirOK=()=>'webkitdirectory' in document.createElement('input')&&!impIsIOS();
 const impBatch=()=>IMP?IMP.all.slice(IMP.off,IMP.off+IMP_CAP):[];
@@ -1867,14 +1874,13 @@ function impScopePrompt(){return modal({title:'Allow shared-link access',body:`<
  buttons:[{label:'Cancel',value:null},{label:'Allow',value:true,cls:'primary'}]}).then(v=>{if(!v)return;sessionStorage.setItem('sap.imp.link',IMP.link.url);Dbx.grant('sharing.read','#/import/'+IMP.aid)})}
 /* ---------- Loading sources ---------- */
 function impSetAll(list,label,kind,notes=[]){const imgs=list.sort((a,b)=>a.rel.localeCompare(b.rel,undefined,{numeric:true}));
- IMP.all=imgs.map((x,i)=>({id:'p'+i+'_'+uid(),sel:true,thumb:null,bad:null,state:'',res:null,err:null,prep:null,heic:IMP_HEIC.test(x.name)||/hei[cf]/i.test(x.type||''),...x}));
+ IMP.all=imgs.map((x,i)=>({id:'p'+i+'_'+uid(),sel:true,thumb:null,bad:null,state:'',res:null,err:null,prep:null,heic:IMP_HEIC.test(x.name)||HEIC_MIME.test(x.type||'')||!!x.heic,...x}));
  IMP.off=0;IMP.label=label;IMP.kind=kind;IMP.notes=notes;IMP.rows=[];IMP.step=IMP.all.length?'pick':'source';
- if(!IMP.all.length)alertBox('No photos were found in '+label+'. Supported: JPEG, PNG, WebP, HEIC.','Import photos');else if(kind==='device')impHeicCheck();impPaint()}
-async function impDevice(files){const all=[...files];const imgs=all.filter(f=>/^image\//.test(f.type)||IMP_IMG.test(f.name));const skipped=all.length-imgs.length;
+ if(!IMP.all.length)alertBox('No photos were found in '+label+'. Supported: JPEG, PNG, WebP, HEIC.','Import photos');impPaint()}
+async function impDevice(files){const all=[...files];const sniff=new Set();for(const f of all)if((!f.type||f.type==='application/octet-stream')&&!IMP_IMG.test(f.name)&&!/^\./.test(f.name)&&f.size>12&&await heicSniff(f))sniff.add(f); // HEIC with no extension / MIME
+ const imgs=all.filter(f=>/^image\//.test(f.type)||IMP_IMG.test(f.name)||sniff.has(f));const skipped=all.length-imgs.length;
  const dir=imgs[0]&&imgs[0].webkitRelativePath?imgs[0].webkitRelativePath.split('/')[0]:'';
- impSetAll(imgs.map(f=>({name:f.name,rel:f.webkitRelativePath||f.name,size:f.size,type:f.type,src:{t:'file',f}})),dir?'folder “'+dir+'”':'the selected photos','device',skipped?[`${skipped} non-image file${skipped>1?'s':''} ignored.`]:[])}
-async function impHeicCheck(){const h=IMP.all.filter(p=>p.heic&&p.src.t==='file');if(!h.length)return;if(impHeicOK===null){try{const b=await createImageBitmap(h[0].src.f);b.close&&b.close();impHeicOK=true}catch(e){try{await impDecode(h[0].src.f);impHeicOK=true}catch(e2){impHeicOK=false}}}
- if(!impHeicOK){h.forEach(p=>{p.bad=IMP_HEIC_NOTE;p.sel=false});impPaint()}}
+ impSetAll(imgs.map(f=>({name:f.name,rel:f.webkitRelativePath||f.name,size:f.size,type:f.type,heic:sniff.has(f),src:{t:'file',f}})),dir?'folder “'+dir+'”':'the selected photos','device',skipped?[`${skipped} non-image file${skipped>1?'s':''} ignored.`]:[])}
 async function impDbxBrowse(path){const d=IMP.dbx;d.path=impPath(path);d.loading=true;impPaint();
  try{const R=await impRoots();const root=d.space==='team'?R.team:null;const{es}=await impList({path:d.path,recursive:false},root);
   d.folders=es.filter(e=>e['.tag']==='folder').map(e=>({name:e.name,path:e.path_display})).sort((a,b)=>a.name.localeCompare(b.name));d.imgs=es.filter(e=>e['.tag']==='file'&&IMP_IMG.test(e.name)).length;d.at=d.path}
@@ -1902,10 +1908,13 @@ const impThumbArg=(p,size)=>({resource:p.src.t==='link'?{'.tag':'link',url:p.src
 const impDbxThumb=(p,size)=>impContent('files/get_thumbnail_v2',impThumbArg(p,size),p.src.t==='path'?p.src.root:null);
 const impDbxFile=p=>p.src.t==='link'?impContent('sharing/get_shared_link_file',{url:p.src.url,...(p.src.path?{path:p.src.path}:{})},null):impContent('files/download',{path:p.src.path},p.src.root);
 function impCanvas(src,max){const w0=src.naturalWidth||src.width,h0=src.naturalHeight||src.height,s=Math.min(1,max/Math.max(w0,h0));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w0*s));c.height=Math.max(1,Math.round(h0*s));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(src,0,0,c.width,c.height);return c}
-/* Full image → 1600px JPEG blob for the issue (+ optional 1024px data URL for the AI). HEIC from Dropbox goes through Dropbox's JPEG thumbnail. */
+/* Full image → 1600px JPEG blob for the issue (+ optional 1024px data URL for the AI). HEIC on the device: native decode, else converted
+ here (libheif, one at a time). HEIC from Dropbox goes through Dropbox's JPEG thumbnail, falling back to the local converter. */
+async function impHeicFile(f){const c=await heicConvert(f);return impDecode(c)}
 async function impPrep(p,withAI){let img;
- if(!p.prep){if(p.src.t==='file'){try{img=await impDecode(p.src.f)}catch(e){throw new Error(p.heic?IMP_HEIC_NOTE:'This file could not be read as an image.')}}
-  else{let b=null;if(!p.heic){b=await impDbxFile(p);try{img=await impDecode(b)}catch(e){img=null}}b=null;if(!img)img=await impDecode(await impDbxThumb(p,'w2048h1536'))}
+ if(!p.prep){if(p.src.t==='file'){try{img=await impDecode(p.src.f)}catch(e){if(!(p.heic||await isHeic(p.src.f)))throw new Error('This file could not be read as an image.');p.heic=true;img=await impHeicFile(p.src.f)}}
+  else{let b=null;if(!p.heic){b=await impDbxFile(p);try{img=await impDecode(b)}catch(e){img=null;if(await isHeic(b)){p.heic=true;img=await impHeicFile(b)}}}b=null;
+   if(!img){try{img=await impDecode(await impDbxThumb(p,'w2048h1536'))}catch(e){if(!p.heic)throw e;img=await impHeicFile(new File([await impDbxFile(p)],p.name))}}}
   const c=impCanvas(img,1600);const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));p.prep={blob,w:c.width,h:c.height};if(!withAI)return{prep:p.prep};return{prep:p.prep,ai:impCanvas(c,1024).toDataURL('image/jpeg',0.8)}}
  if(!withAI)return{prep:p.prep};const i2=await impDecode(p.prep.blob);return{prep:p.prep,ai:impCanvas(i2,1024).toDataURL('image/jpeg',0.8)}}
 /* Lazy thumbnails: only for tiles scrolled into view, max 3 in flight */
@@ -1915,9 +1924,9 @@ function impThumbObserve(){if(impTQ.io)impTQ.io.disconnect();if(!('IntersectionO
  $$('.imp-th[data-pid]').forEach(el=>{const p=impP(el.dataset.pid);if(p&&!p.thumb)impTQ.io.observe(el)})}
 function impThumbQueue(id){const p=impP(id);if(!p||p.thumb||p.tq)return;p.tq=1;impTQ.q.push(p);impThumbPump()}
 async function impThumbPump(){while(impTQ.n<3&&impTQ.q.length){const p=impTQ.q.shift();impTQ.n++;impThumb(p).finally(()=>{impTQ.n--;impThumbPump()})}}
-async function impThumb(p){try{if(p.src.t==='file'){let bm;try{bm=await createImageBitmap(p.src.f,{resizeWidth:240,resizeQuality:'low'})}catch(e){bm=await impDecode(p.src.f)}const c=impCanvas(bm,240);bm.close&&bm.close();p.thumb=c.toDataURL('image/jpeg',0.7)}
-  else p.thumb=await blobToDataURL(await impDbxThumb(p,'w256h256'))}
- catch(e){p.thumb='x';if(p.src.t==='file'){p.bad=p.heic?IMP_HEIC_NOTE:'Not a readable image – will be skipped.';p.sel=false;return impPaint()}}
+async function impThumb(p){try{if(p.src.t==='file'){let bm;try{bm=await createImageBitmap(p.src.f,{resizeWidth:240,resizeQuality:'low'})}catch(e){try{bm=await impDecode(p.src.f)}catch(e2){if(!(p.heic||await isHeic(p.src.f)))throw e2;p.heic=true;bm=await heicThumb(p.src.f,240)}}const c=impCanvas(bm,240);bm.close&&bm.close();p.thumb=c.toDataURL('image/jpeg',0.7)}
+  else{try{p.thumb=await blobToDataURL(await impDbxThumb(p,'w256h256'))}catch(e){if(!p.heic)throw e;p.thumb=impCanvas(await heicThumb(new File([await impDbxFile(p)],p.name),240),240).toDataURL('image/jpeg',0.7)}}}
+ catch(e){p.thumb='x';if(p.src.t==='file'){p.bad=/HEIC/.test(e.message)?'HEIC photo could not be converted – the file looks damaged or incomplete. It will be skipped.':'Not a readable image – will be skipped.';p.sel=false;return impPaint()}}
  const el=$(`.imp-th[data-pid="${p.id}"]`);if(el){const im=el.querySelector('img');if(im&&p.thumb!=='x'){im.src=p.thumb;im.hidden=false}}}
 /* ---------- Analysis runner (1–2 at a time, pause / cancel, automatic wait on 429 / busy) ---------- */
 const impNoDefect=s=>s&&(s.defectVisible===false||(s.trade==='Other'&&/\bno (visible )?(construction )?(defect|issue|damage)/i.test((s.title||'')+' '+(s.description||''))));
@@ -1978,8 +1987,8 @@ function impBody(){return IMP.step==='source'?impSourceHTML():IMP.step==='pick'?
 const impWarnHTML=n=>`<div class="hint imp-warn"><b>Heads-up:</b> the company's current OpenAI plan allows roughly <b>50 AI photo analyses per day</b> in total (and up to 60 AI requests per person per hour).${n?` Analysing ${n} photo${n>1?'s':''} uses ${n} of them.`:''} If a limit is reached, the import waits and continues automatically – or pause it and resume later.</div>`;
 function impSourceHTML(){const con=Dbx.connected(),d=IMP.dbx,L=IMP.link;if(Dbx.loc&&Dbx.loc.rootNs)d.teamSpace=!!Dbx.loc.teamSpace;
  return`<div class="imp-src">
- <div class="card pad"><h2 class="imp-h">${ic('image')} From this device</h2><p class="help" style="margin-top:0">Pick several photos${impDirOK()?' or a whole folder':''}. On iPhone, choose from Photos or Files.</p>
-  <div class="actions"><label class="btn primary">${ic('image')} Choose photos<input type="file" accept="image/*" multiple hidden data-change="imp-files"></label>${impDirOK()?`<label class="btn">${ic('folder')} Choose folder<input type="file" webkitdirectory multiple hidden data-change="imp-files"></label>`:''}</div></div>
+ <div class="card pad"><h2 class="imp-h">${ic('image')} From this device</h2><p class="help" style="margin-top:0">Pick several photos${impDirOK()?' or a whole folder':''}. On iPhone, choose from Photos or Files. JPEG, PNG, WebP and HEIC/HEIF (iPhone) photos all work – HEIC is converted to JPEG on this device.</p>
+  <div class="actions"><label class="btn primary">${ic('image')} Choose photos<input type="file" accept="image/*,.heic,.heif" multiple hidden data-change="imp-files"></label>${impDirOK()?`<label class="btn">${ic('folder')} Choose folder<input type="file" webkitdirectory multiple hidden data-change="imp-files"></label>`:''}</div></div>
  <div class="card pad"><h2 class="imp-h">${ic('folder')} From a Dropbox folder</h2>${con?`
   <form class="form-grid" onsubmit="return false"><label class="full"><span>Folder path</span><input id="imp-dbx-path" value="${esc(d.path)}" placeholder="/Site photos/Level 12" data-change="imp-dbx-path"></label>
   ${d.teamSpace!==false?`<label><span>Look in</span><select data-change="imp-dbx-space"><option value="team" ${d.space==='team'?'selected':''}>Team space</option><option value="home" ${d.space==='home'?'selected':''}>My files (home)</option></select></label>`:''}
@@ -2151,14 +2160,14 @@ async function flagDialog(it,{fromNew=false}={}){const p=byId('projects',it.proj
   ${classified?`<div class="full seg-choice"><label class="chk"><input type="radio" name="mode" value="link" checked> Create a linked issue for that trade (keep this one in ${esc(it.category)})</label><label class="chk"><input type="radio" name="mode" value="move"> Hand this issue over to that trade</label></div>`:`<input type="hidden" name="mode" value="move"><p class="help full" style="margin:0">This issue ${it.category?'':'(not classified yet) '}will be handed over to the chosen trade.</p>`}
   <label class="full"><span>Note for the other trade</span><textarea name="note" rows="3" placeholder="e.g. Cracked tile next to the FCU – ARCH to replace"></textarea></label>
   ${photos.length&&classified?`<div class="full" data-copyph><span class="small muted">Photos to copy to the linked issue</span><div class="flag-ph">${photos.map((ph,n)=>`<label><input type="checkbox" name="ph" value="${ph}" checked><img data-photo="${ph}" alt=""><span>${n+1}</span></label>`).join('')}</div></div>`:''}
-  <label class="full"><span>Add photos</span><input type="file" accept="image/*" multiple name="files"></label></form>`;
+  <label class="full"><span>Add photos</span><input type="file" accept="image/*,.heic,.heif" multiple name="files"></label></form>`;
  const r=await modal({title:'Flag to another trade',body,wide:true,buttons:[{label:'Cancel',value:null},{label:'Flag',value:'ok',cls:'primary'}],
   onOpen:el=>{hydrate(el);const ts=el.querySelector('[name=toTrade]'),pe=el.querySelector('[name=toEmail]');const fill=()=>{pe.innerHTML=`<option value="">Anyone in ${esc(ts.value)}</option>`+people(ts.value).map(m=>`<option value="${esc(m.email)}">${esc(memberLabel(m))}</option>`).join('')};ts.onchange=fill;fill();
    el.querySelector('[name=files]').onchange=e=>{newFiles=[...e.target.files]}},
   collect:el=>({toTrade:el.querySelector('[name=toTrade]').value,toEmail:el.querySelector('[name=toEmail]').value,mode:(el.querySelector('[name=mode]:checked')||el.querySelector('[name=mode]')).value,note:el.querySelector('[name=note]').value.trim(),ph:$$('[name=ph]:checked',el).map(x=>x.value)})});
  if(!r)return;const done=busy('Flagging…');try{const to=(p.team||[]).find(m=>eqEmail(m.email,r.toEmail));
   const f={status:'pending',toTrade:r.toTrade,toEmail:to?to.email:'',toName:to?to.name||to.email:'',note:r.note,byEmail:R.email,byName:myName(),byDesig:R.desig||'',fromTrade,at:Date.now(),history:[{a:'flagged to '+r.toTrade+(to?' ('+(to.name||to.email)+')':''),by:myName()||R.email,at:Date.now(),note:r.note}]};
-  const added=[];for(const fl of newFiles){const rr=await resizeImage(await fileToDataURL(fl),1600);added.push((await putPhoto({id:uid(),...rr,createdAt:Date.now()})).id)}
+  const added=[];for(const fl of newFiles){const rr=await resizeImage(await imgDataURL(fl),1600);added.push((await putPhoto({id:uid(),...rr,createdAt:Date.now()})).id)}
   let target;
   if(r.mode==='link'){const copies=[];for(const id of r.ph){const ph=await getPhoto(id);if(ph)copies.push((await putPhoto({id:uid(),data:ph.data,w:ph.w,h:ph.h,createdAt:Date.now()})).id)}
    target=await newItem(it.auditId,{title:it.title,description:[r.note,`Raised from #${it.number}${it.category?' ('+it.category+')':''}.`].filter(Boolean).join('\n\n'),location:it.location,priority:it.priority,pin:it.pin?{...it.pin}:null,category:r.toTrade,photos:[...copies,...added],flag:{...f,fromItem:it.id}});
@@ -2527,7 +2536,7 @@ const photoSrcName=(it,id)=>(it&&it.photoSrc&&it.photoSrc[id])||'';
 /* ---- issue page: photo pane (left on tablets / laptops, on top on phones) ---- */
 function ivSel(i){const n=(i.photos||[]).length;const s=UI.ivSel&&UI.ivSel.id===i.id?UI.ivSel.k:0;return clamp(s|0,0,Math.max(0,n-1))}
 function ivMediaHTML(i,ed){const ph=i.photos||[],n=ph.length,id=i.id,k=ivSel(i);
- const add=ed?`<label class="btn primary sm">${ic('camera')} Take photo<input type="file" accept="image/*" capture="environment" hidden data-change="item-photos" data-id="${id}"></label><label class="btn sm">${ic('upload')} Upload<input type="file" accept="image/*" multiple hidden data-change="item-photos" data-id="${id}"></label>`:'';
+ const add=ed?`<label class="btn primary sm">${ic('camera')} Take photo<input type="file" accept="image/*,.heic,.heif" capture="environment" hidden data-change="item-photos" data-id="${id}"></label><label class="btn sm">${ic('upload')} Upload<input type="file" accept="image/*,.heic,.heif" multiple hidden data-change="item-photos" data-id="${id}"></label>`:'';
  if(!n)return`<section class="iv-media iv-nophoto" aria-label="Photos">${ed?`<div class="iv-drop" data-drop="${id}" data-act="iv-pick"><span class="iv-drop-ic">${ic('camera')}</span><b>Add a photo of this issue</b><span>Drop photos here, take a photo or upload from your device</span><div class="iv-drop-btns">${add}</div></div>`:`<div class="iv-drop iv-ro"><span class="iv-drop-ic">${ic('camera')}</span><b>No photos</b></div>`}</section>`;
  const src=photoSrcName(i,ph[k]);
  return`<section class="iv-media" aria-label="Photos"><div class="iv-stage photos" ${ed?`data-drop="${id}"`:''}>${ph.map((p,j)=>`<div class="ph${j===k?' on':''}" data-k="${j}"><img data-photo="${p}" data-act="lightbox" alt="${esc(photoName(i,j))}" title="Tap to zoom"><div class="ph-act" ${ed?'':'hidden'}>${aiPhotoBtn(id,p)}${j>0?`<button data-act="photo-first" data-id="${id}" data-ph="${p}" title="Make main photo">★</button>`:''}<button data-act="annotate" data-id="${id}" data-ph="${p}">${ic('pen')} Annotate</button><button data-act="del-photo" data-id="${id}" data-ph="${p}" title="Delete photo">${ic('trash')}</button></div></div>`).join('')}
@@ -2557,8 +2566,8 @@ const ivDropEl=e=>e.target&&e.target.closest&&e.target.closest('[data-drop]');
 const ivHasFiles=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
 document.addEventListener('dragover',e=>{const z=ivDropEl(e);if(!z||!ivHasFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('iv-over')});
 document.addEventListener('dragleave',e=>{const z=ivDropEl(e);if(z&&!z.contains(e.relatedTarget))z.classList.remove('iv-over')});
-document.addEventListener('drop',e=>{const z=ivDropEl(e);if(!z||!ivHasFiles(e))return;e.preventDefault();z.classList.remove('iv-over');const it=byId('items',z.dataset.drop);const files=[...e.dataTransfer.files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|heic)$/i.test(f.name));
- if(it&&files.length&&canEditItem(it))addPhotos(it,files);else if(it&&!files.length)toast('Drop image files (JPG / PNG)')});
+document.addEventListener('drop',e=>{const z=ivDropEl(e);if(!z||!ivHasFiles(e))return;e.preventDefault();z.classList.remove('iv-over');const it=byId('items',z.dataset.drop);const files=[...e.dataTransfer.files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name)||!f.type||f.type==='application/octet-stream');
+ if(it&&files.length&&canEditItem(it))addPhotos(it,files);else if(it&&!files.length)toast('Drop image files (JPG, PNG or HEIC)')});
 
 /* ---- inspecting companies ---- */
 const CO_SHARED='_shared',CO_DEFAULT='co_syden';
@@ -2598,7 +2607,7 @@ async function coEdit(c){const isNew=!c;const sh=coShared();
  const r=await modal({title:isNew?'Add company':'Edit company',wide:true,body:`<form class="form-grid" onsubmit="return false">${f.map(x=>fieldHTML(x,c&&c[x.k])).join('')}</form>`,
   buttons:[{label:'Cancel',value:null},...(isNew?[]:[{label:'Delete',value:'del',cls:'danger'}]),{label:'Save',value:'ok',cls:'primary',validate:el=>{const i=el.querySelector('[name=name]');if(!i.value.trim()){i.focus();toast('Company name is required');return false}return true}}],
   onOpen:el=>{const box=el.querySelector('[data-img]'),inp=box.querySelector('input[type=file]'),img=box.querySelector('img'),clr=box.querySelector('[data-clear]');
-   inp.onchange=async()=>{const fl=inp.files[0];if(!fl)return;const rr=await resizeImage(await fileToDataURL(fl),600,'image/png');box.dataset.val=rr.data;img.src=rr.data;img.hidden=false;clr.hidden=false};clr.onclick=()=>{box.dataset.val='';img.hidden=true;clr.hidden=true}},
+   inp.onchange=async()=>{const fl=inp.files[0];if(!fl)return;const rr=await resizeImage(await imgDataURL(fl),600,'image/png');box.dataset.val=rr.data;img.src=rr.data;img.hidden=false;clr.hidden=false};clr.onclick=()=>{box.dataset.val='';img.hidden=true;clr.hidden=true}},
   collect:(el,v)=>{if(v==='del')return{del:true};const o={};['name','website','footer',...CO_ADDR.map(x=>x[0])].forEach(k=>o[k]=el.querySelector(`[name="${k}"]`).value.trim());o.logo=el.querySelector('[data-img]').dataset.val||'';return o}});
  if(!r)return;if(r.del){const n=S.projects.filter(p=>!p.stub&&p.companyId===c.id).length;if(!await confirmBox(`Delete company “${c.name}”?${n?` ${n} project${n>1?'s':''} still use it (their reports keep it until you choose another company).`:''}`))return;c.deleted=true;await coSave(c);toast('Company deleted');return render()}
  if(isNew)c={id:'co_'+uid(),ord:50,createdAt:Date.now()};Object.assign(c,r);delete c.deleted;await coSave(c);toast('Company saved');render()}
@@ -2650,6 +2659,56 @@ async function pdfIssueLayout(C,fields,blocks,photos,extras,per){const{doc,M,fon
    return y}}}
 /* keep header bar (14 mm) + block together when it fits on a page; otherwise at least header + photo + first details */
 function pdfKeep(L,ensure,avail){ensure(14+(14+L.h<=avail?L.h:L.topH))}
+
+/* ===== HEIC / HEIF photos in every browser =====
+ Detection by extension, MIME type or file signature (ftyp brand). A native decode is tried first (Safari, or any browser that can
+ read HEIC); otherwise the photo is converted to JPEG (quality 0.9) by libheif (WebAssembly) in a Worker. The decoder lives in
+ ./heic/ next to the app, is loaded only when the first HEIC photo is met and is precached by the service worker for offline use.
+ Conversions run one at a time (memory); the worker is shut down after a minute without work. */
+const HEIC_EXT=/\.(heic|heif)$/i,HEIC_MIME=/^image\/(heic|heif)(-sequence)?$/i;
+const HEIC_BRANDS=['heic','heix','hevc','hevx','heim','heis','hevm','hevs','mif1','msf1'],HEIC_ONLY=HEIC_BRANDS.filter(b=>b!=='mif1'&&b!=='msf1');
+const HEIC={native:null,worker:null,wfail:false,main:null,seq:0,jobs:new Map(),chain:Promise.resolve(),pending:0,idle:0};
+/* read the ISO-BMFF ftyp box: major brand + compatible brands. AVIF (avif/avis) shares mif1/msf1 – not HEIC. */
+async function heicSniff(f){try{const b=new Uint8Array(await f.slice(0,64).arrayBuffer());if(b.length<12)return false;const s=String.fromCharCode.apply(null,b);if(s.slice(4,8)!=='ftyp')return false;
+ const size=Math.min(b.length,((b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3])>>>0||b.length),major=s.slice(8,12),compat=[];for(let i=16;i+4<=size;i+=4)compat.push(s.slice(i,i+4));
+ if(major==='avif'||major==='avis'||compat.includes('avif')&&!compat.some(c=>HEIC_ONLY.includes(c)))return false;return HEIC_BRANDS.includes(major)||compat.some(c=>HEIC_ONLY.includes(c))}catch(e){return false}}
+const heicHint=f=>!!f&&(HEIC_EXT.test(f.name||'')||HEIC_MIME.test(f.type||''));
+async function isHeic(f){return!!f&&(heicHint(f)||await heicSniff(f))}
+async function heicNativeOK(f){try{const b=await createImageBitmap(f);const ok=b.width>0;b.close&&b.close();if(ok)return true}catch(e){}
+ const u=URL.createObjectURL(f);try{const i=await loadImg(u);return i.naturalWidth>0}catch(e){return false}finally{URL.revokeObjectURL(u)}}
+const heicBase=()=>new URL('heic/',location.href).href;
+/* progress pill (non-blocking, shown above busy overlays) */
+function heicPill(){let el=document.getElementById('heic-pill');const n=HEIC.pending;if(!n){if(el)el.remove();return}
+ if(!el){el=document.createElement('div');el.id='heic-pill';el.className='heic-pill';el.setAttribute('role','status');document.body.appendChild(el)}
+ el.innerHTML=`<span class="spin"></span> Converting HEIC photo…${n>1?` <span class="muted">(${n} waiting)</span>`:''}`}
+function heicWorker(){if(HEIC.worker||HEIC.wfail)return HEIC.worker;
+ try{const w=new Worker(heicBase()+'heic-worker.js');w.onmessage=e=>{const m=e.data||{},j=HEIC.jobs.get(m.id);if(!j)return;HEIC.jobs.delete(m.id);m.ok?j.res(m):j.rej(new Error(m.err||'conversion failed'))};
+  w.onerror=e=>{e.preventDefault&&e.preventDefault();const err=new Error('the HEIC converter could not be loaded'+(navigator.onLine===false?' (offline and not cached yet)':''));for(const j of HEIC.jobs.values())j.rej(err);HEIC.jobs.clear();try{w.terminate()}catch(x){}if(HEIC.worker===w)HEIC.worker=null;if(!HEIC.okOnce)HEIC.wfail=true};
+  HEIC.worker=w}catch(e){HEIC.wfail=true}return HEIC.worker}
+const heicScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('the HEIC converter could not be loaded ('+src.split('/').pop()+')'));document.head.appendChild(s)});
+async function heicMain(msg){if(!HEIC.main)HEIC.main=(async()=>{const B=heicBase();await heicScript(B+(location.protocol==='file:'?'libheif-bundle.js':'libheif.js'));await heicScript(B+'heic-worker.js');if(!self.__heicConvert)throw new Error('HEIC converter missing');return self.__heicConvert})().catch(e=>{HEIC.main=null;throw e});
+ const conv=await HEIC.main;return conv(msg)}
+function heicRun(msg){const w=heicWorker();if(!w)return heicMain(msg);const id=++HEIC.seq,copy=HEIC.okOnce?null:msg.buf.slice(0);
+ return new Promise((res,rej)=>{HEIC.jobs.set(id,{res,rej});w.postMessage({id,buf:msg.buf,max:msg.max,q:msg.q},[msg.buf])}).catch(e=>{if(HEIC.wfail&&copy)return heicMain({...msg,buf:copy});throw e})}
+/* HEIC/HEIF Blob → JPEG Blob (primary image, orientation applied by libheif). opts.max downsizes (thumbnails). One at a time. */
+function heicConvert(f,opts={}){HEIC.pending++;heicPill();clearTimeout(HEIC.idle);
+ const job=HEIC.chain.then(async()=>{const buf=await f.arrayBuffer();const msg={buf,max:opts.max||0,q:opts.q||0.9};
+  let r;try{r=await heicRun(msg)}catch(e){throw heicErr(f,e)}HEIC.okOnce=true;
+  if(r.blob)return r.blob;const c=document.createElement('canvas');c.width=r.w;c.height=r.h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,r.w,r.h);
+  const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(r.rgba),r.w,r.h),0,0);x.drawImage(t,0,0);
+  let out=c;if(opts.max&&Math.max(r.w,r.h)>opts.max){out=impCanvas(c,opts.max)}return new Promise((res,rej)=>out.toBlob(b=>b?res(b):rej(heicErr(f,new Error('JPEG encoding failed'))),'image/jpeg',opts.q||0.9))});
+ HEIC.chain=job.catch(()=>{});return job.finally(()=>{HEIC.pending--;heicPill();if(!HEIC.pending){clearTimeout(HEIC.idle);HEIC.idle=setTimeout(()=>{if(!HEIC.pending&&HEIC.worker){HEIC.worker.terminate();HEIC.worker=null}},60000)}})}
+function heicErr(f,e){const m=String(e&&e.message||e);const name=f&&f.name?`“${f.name}”`:'This photo';
+ return new Error(/could not be loaded/.test(m)?`${name} is a HEIC photo and ${m}. Connect to the internet once so the app can store the converter, then try again.`:`${name} could not be converted from HEIC – the file looks damaged or incomplete (${m}).`)}
+/* any image File → something every browser can decode: the file itself, or a JPEG File converted from HEIC (name *.jpg, .heicName = original) */
+async function imgReadable(f){if(!f||!await isHeic(f))return f;
+ if(HEIC.native!==false&&await heicNativeOK(f)){HEIC.native=true;return f}
+ const blob=await heicConvert(f);if(HEIC.native===null)HEIC.native=false;
+ const nm=(f.name||'photo').replace(/\.[^./]*$/,'')+'.jpg';let out;try{out=new File([blob],nm,{type:'image/jpeg',lastModified:f.lastModified||Date.now()})}catch(e){out=blob;out.name=nm}out.heicName=f.name||'';return out}
+/* File → data URL (HEIC converted first) */
+async function imgDataURL(f){return fileToDataURL(await imgReadable(f))}
+/* small thumbnail bitmap/canvas source for a HEIC file (import grid) */
+async function heicThumb(f,max=240){const b=await heicConvert(f,{max,q:0.8});return impDecode(b)}
 
 </script>
 </body>
