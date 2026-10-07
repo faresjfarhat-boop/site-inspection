@@ -1330,7 +1330,7 @@ async function reportDialog(scope){const isA=scope.type==='audit';const obj=byId
  const r=await modal({title:'Generate report',wide:true,body:`<div class="form-grid"><label class="full"><span>Report title</span><input name="title" value="${esc(isA?p.name+' – '+obj.title:p.name)}"></label>
  <label><span>Report type (cover subtitle)</span><input name="subtitle" value="${isA?'Site Inspection Report':'Project Inspection Report'}" list="dl-sub"><datalist id="dl-sub"><option value="Site Inspection Report"><option value="Snagging Report"><option value="Punch List"><option value="Health & Safety Inspection"><option value="Property Condition Report"><option value="Defects Report"></datalist></label>
  <label><span>Theme colour</span><select name="color">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${v===(S.settings.reportColor||THEMES.Blue)?'selected':''}>${k}</option>`).join('')}</select></label>
- <label><span>Photos per row</span><select name="perRow"><option value="2">2 (large)</option><option value="3" selected>3</option><option value="4">4 (compact)</option></select></label>
+ 
  <label><span>Issue order</span><select name="sort"><option value="number">By number</option><option value="priority">By priority</option><option value="location">By location</option></select></label>
  ${chk('closed','Include closed issues')}${chk('summary','Summary table')}${chk('photos','Photos')}${chk('pinrefs','Drawing location thumbnail per issue')}${chk('drawings','Drawings with pins')}${chk('checklists','Checklists')}</div>
  <p class="help">PDF downloads a file you can share by email / WhatsApp. Print view opens a printable page (use “Save as PDF” in the print dialog).</p>`,
@@ -1423,7 +1423,7 @@ h2{color:${acc};border-bottom:2px solid ${acc};padding-bottom:4px;margin:24px 0 
 .stats{display:flex;gap:8px;margin:14px 0}.stats div{flex:1;border:1px solid #dde3ea;border-radius:6px;padding:8px;text-align:center;font-size:8pt;color:#667;text-transform:uppercase;font-weight:bold}.stats b{display:block;font-size:18pt}
 table{width:100%;border-collapse:collapse;font-size:9pt}th{background:${acc};color:#fff;text-align:left;padding:5px}td{padding:5px;border-bottom:1px solid #e2e8f0;vertical-align:top}tr:nth-child(even) td{background:#f6f8fb}
 .item{break-inside:avoid;page-break-inside:avoid;margin-bottom:16px;border-bottom:1px solid #e2e8f0;padding-bottom:12px}.ih{background:${lt};border-left:5px solid ${acc};padding:7px 10px;font-weight:bold;font-size:12pt;display:flex;justify-content:space-between;gap:8px;align-items:center}.ih .n{color:${acc}}
-.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;margin:8px 0}.fields small{display:block;color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase}.imgs{display:grid;grid-template-columns:repeat(${Math.min(4,Math.max(3,per))},1fr);gap:8px;margin-top:8px}.ib{display:grid;grid-template-columns:47% 1fr;gap:14px;margin-top:8px;align-items:start}.ib.nophoto{grid-template-columns:1fr}.ib .main figure{margin:0}.ib .main img{width:100%;max-height:95mm;object-fit:contain;background:#f1f5f9;display:block}.ib .main figcaption{font-weight:bold;margin-top:3px}.kv{display:grid;grid-template-columns:28mm 1fr;gap:3px 8px;font-size:9.5pt}.nophoto .kv{grid-template-columns:28mm 1fr 28mm 1fr}.kv small,small.bl{color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase;padding-top:2px}small.bl{display:block;margin-top:10px}.kv .over{color:#be123c;font-weight:bold}.imgs figure{margin:0}.imgs img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#f1f5f9;display:block}figcaption{font-size:8pt;color:#667}
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;margin:8px 0}.fields small{display:block;color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase}.imgs{display:grid;grid-template-columns:47% 47%;column-gap:14px;row-gap:8px;margin-top:8px;align-items:start}.ib{display:grid;grid-template-columns:47% 1fr;gap:14px;margin-top:8px;align-items:start}.ib.nophoto{grid-template-columns:1fr}.ib .main figure{margin:0}.ib .main img{width:auto;max-width:100%;height:auto;max-height:110mm;display:block;margin:0 auto}.ib .main figcaption{font-weight:bold;margin-top:3px}.kv{display:grid;grid-template-columns:28mm 1fr;gap:3px 8px;font-size:9.5pt}.nophoto .kv{grid-template-columns:28mm 1fr 28mm 1fr}.kv small,small.bl{color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase;padding-top:2px}small.bl{display:block;margin-top:10px}.kv .over{color:#be123c;font-weight:bold}.imgs figure{margin:0}.imgs img{width:auto;max-width:100%;height:auto;max-height:110mm;display:block;margin:0 auto}.imgs figure,.ib .main figure{break-inside:avoid;page-break-inside:avoid}.imgs figcaption{font-weight:bold;margin-top:3px}figcaption{font-size:8pt;color:#667}
 .chip{color:#fff;border-radius:4px;padding:1px 7px;font-size:8.5pt;margin-left:4px;white-space:nowrap}.pb{break-before:page;page-break-before:always}.dw img{max-width:100%;max-height:235mm;display:block;margin:auto;border:1px solid #ccd}.desc{white-space:pre-wrap}.sec td{background:${lt}!important;font-weight:bold;color:${acc}}
 </style></head><body><div class="cover"><div><div style="font-weight:bold;letter-spacing:.06em">${esc((o.subtitle||'').toUpperCase())}</div><h1>${esc(o.title)}</h1><div>${esc([p.client,p.address].filter(Boolean).join(' · '))}</div>${co.name?`<div class="co">Inspecting company: ${esc(co.name)}</div>`:''}</div>${logo||clogo?`<div class="lgs">${logo?`<div class="lg"><img src="${logo}" alt="${esc(co.name)}"></div>`:''}${clogo?`<div class="lg"><img src="${clogo}" alt=""></div>`:''}</div>`:''}</div>
 <dl>${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="stats"><div><b>${all.length}</b>Total</div><div><b style="color:#dc2626">${cnt('Open')}</b>Open</div><div><b style="color:#d97706">${cnt('In Progress')}</b>In progress</div><div><b style="color:#16a34a">${cnt('Closed')}</b>Closed</div><div><b style="color:#9f1239">${all.filter(isOver).length}</b>Overdue</div></div>${tradeCounts(all).length?`<p style="font-size:9pt;color:#556"><b>Issues by trade:</b> ${tradeCounts(all).map(([t,n])=>esc(t)+' '+n).join(' · ')}</p>`:''}${[a?a.notes:'',p.notes].filter(Boolean).map(n=>`<p class="desc">${esc(n)}</p>`).join('')}`;
@@ -2465,10 +2465,10 @@ async function conDialog(pid){const p=byId('projects',pid),R=projRole(p);if(R.mo
   ${R.admin?'':`<p class="help full" style="margin:0">Includes only the issues you can see: ${esc(roleScopeText(p))}</p>`}
   <div class="full"><span class="small muted">Inspections</span><div class="con-aud">${aus.map(a=>`<label class="chk"><input type="checkbox" name="aud" value="${a.id}" checked> ${esc(a.title)} <span class="muted small">${fmtDate(a.date)}</span></label>`).join('')||'<p class="help">No inspections yet.</p>'}</div></div>
   <label><span>Theme colour</span><select name="color">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${v===(S.settings.reportColor||THEMES.Blue)?'selected':''}>${k}</option>`).join('')}</select></label>
-  <label><span>Photos per row</span><select name="perRow"><option value="2">2 (large)</option><option value="3" selected>3</option><option value="4">4 (compact)</option></select></label>
+  
   <label class="chk"><input type="checkbox" name="closed" checked> Include closed issues</label><label class="chk"><input type="checkbox" name="photos" checked> Photos</label></div>`,
   buttons:[{label:'Cancel',value:null},{label:'CSV',value:'csv'},...(Dbx.connected()?[{label:'Save PDF to Dropbox',value:'dbx'}]:[]),{label:'Download PDF',value:'pdf',cls:'primary'}],
-  collect:(el,v)=>({v,o:{title:el.querySelector('[name=title]').value.trim()||p.name,color:el.querySelector('[name=color]').value,perRow:el.querySelector('[name=perRow]').value,closed:el.querySelector('[name=closed]').checked,photos:el.querySelector('[name=photos]').checked,audits:$$('[name=aud]:checked',el).map(x=>x.value)}})});
+  collect:(el,v)=>({v,o:{title:el.querySelector('[name=title]').value.trim()||p.name,color:el.querySelector('[name=color]').value,closed:el.querySelector('[name=closed]').checked,photos:el.querySelector('[name=photos]').checked,audits:$$('[name=aud]:checked',el).map(x=>x.value)}})});
  if(!r)return;if(!r.o.audits.length)return alertBox('Choose at least one inspection.');const d=conData(pid,r.o);
  if(r.v==='csv')return download(`${safeName(d.fileName)}.csv`,conCsvBlob(d.items,p));
  const toDbx=r.v==='dbx';const done=busy('Generating consolidated report…');try{const doc=await conPDF(d,r.o,{noDownload:toDbx});if(!toDbx)toast('PDF report downloaded');done();if(Dbx.connected()&&(toDbx||Dbx.prefs().autoPdf))await Sync.uploadReport(doc.output('blob'),d,r.o)}catch(e){console.error(e);alertBox('PDF generation failed: '+e.message)}finally{done()}}
@@ -2636,26 +2636,34 @@ async function pdfChrome(doc,co,{M,left,font,T}){const n=doc.getNumberOfPages(),
    doc.line(M,h-12.5,w-M,h-12.5)}
   font(7.5,'normal',[130,140,155]);T(doc.splitTextToSize(left,w/2-M-10)[0],M,h-8);const mid=[co.name,co.footer].filter(Boolean).join(' · ');if(mid)T(doc.splitTextToSize(mid,w/3)[0],w/2,h-8,{align:'center'});T(`Page ${i} of ${n}`,w-M,h-8,{align:'right'});
   if(line){font(6.5,'normal',[150,158,170]);T(doc.splitTextToSize(line,w-2*M)[0],w/2,h-4,{align:'center'})}}}
-/* ---- PDF issue block body (all PDF reports): main photo left (≈47 %, max 95 mm high, caption = photo name), details as a compact
- label | value grid + description / flag notes on the right; further photos (and the drawing location crop) as captioned thumbnails
- across the full width underneath. No photo → details use the full width. measure() lets the caller keep the block on one page. */
+/* ---- PDF issue block body (all PDF reports): every photo of the issue is drawn at the SAME width = the left column (≈47 % of the
+ content width), height from the image's real pixel size (no stretching, cropping or letterbox). Very tall photos are capped at
+ PDF_PH_MAX mm high – then that photo is narrower, centred in its column. Main photo left, details (label | value grid) +
+ description / flag notes right; further photos (and the drawing-location crop) below in a 2-column grid aligned with the main photo
+ and the right column, captioned "#001 Title - n", rows top-aligned, a row (photo + caption) never split across pages.
+ The old "photos per row" setting no longer applies to issue photos (argument kept for callers, ignored). */
+const PDF_PH_MAX=110;
+function pdfImgDims(doc,im){if(!im._dim){let w=0,h=0;try{const p=doc.getImageProperties(im.data);w=p.width;h=p.height}catch(e){}if(!(w>0&&h>0)){w=im.w;h=im.h}if(!(w>0&&h>0))throw new Error('photo has no size');im._dim={w,h}}return im._dim}
+function pdfFit(doc,im,colW){const d=pdfImgDims(doc,im);let w=colW,h=colW*d.h/d.w;if(h>PDF_PH_MAX){h=PDF_PH_MAX;w=h*d.w/d.h}return{w,h,dx:(colW-w)/2}}
 async function pdfIssueLayout(C,fields,blocks,photos,extras,per){const{doc,M,font,T}=C,GREY=[110,120,135],DARK=[30,36,48];const W=C.PW()-2*M,gap=6,main=photos[0]||null;
- const lw=main?Math.round(W*.47):0,rx=M+(main?lw+gap:0),rw=W-(main?lw+gap:0),pairs=main?1:2,pw=(rw-(pairs-1)*6)/pairs,labW=Math.min(30,pw*.36),valW=pw-labW-2;
+ const all=[...photos,...extras];const lw=Math.round(W*.47);const rx=M+(main?lw+gap:0),rw=W-(main?lw+gap:0),pairs=main?1:2,pw=(rw-(pairs-1)*6)/pairs,labW=Math.min(30,pw*.36),valW=pw-labW-2;
  const f=fields.filter(x=>x[1]!=null&&String(x[1]).trim()!=='');const rows=[];
  for(let k=0;k<f.length;k+=pairs){const cells=f.slice(k,k+pairs).map(([l,v])=>{font(9,'normal');const ls=doc.splitTextToSize(String(v),valW).slice(0,4);return{l,ls,red:/OVERDUE/.test(String(v))}});rows.push({cells,h:Math.max(...cells.map(c=>c.ls.length))*4+1.8})}
  const bl=blocks.filter(b=>b&&b.text).map(b=>{font(9.5,'normal');return{...b,ls:doc.splitTextToSize(String(b.text),rw)}});
- let ph=0,pwid=0;if(main){const s=Math.min(lw/(main.w||4),95/(main.h||3));pwid=(main.w||4)*s;ph=(main.h||3)*s}
- const thumbs=[...photos.slice(1),...extras],tp=clamp(per||4,3,4),tw=(W-4*(tp-1))/tp,th=tw*.75,trows=Math.ceil(thumbs.length/tp);
- const rightH=rows.reduce((a,r)=>a+r.h,0)+bl.reduce((a,b)=>a+3+4.5+b.ls.length*4.3,0),topH=Math.max(main?ph+6:0,rightH);
- return{h:topH+2+trows*(th+7.5),topH:Math.min(topH,main?ph+6+12:24),
+ const fit=new Map();for(const im of all)fit.set(im,pdfFit(doc,im,lw));const CAP=6.5;
+ const ph=main?fit.get(main).h:0,thumbs=all.slice(1),gx=[M,M+lw+gap],grid=[];
+ for(let k=0;k<thumbs.length;k+=2){const r=thumbs.slice(k,k+2);grid.push({ims:r,h:Math.max(...r.map(im=>fit.get(im).h))+CAP})}
+ const rightH=rows.reduce((a,r)=>a+r.h,0)+bl.reduce((a,b)=>a+3+4.5+b.ls.length*4.3,0),topH=Math.max(main?ph+CAP:0,rightH);
+ return{h:topH+2+grid.reduce((a,r)=>a+r.h+3,0),topH:Math.min(topH,main?ph+CAP+12:24),
   async draw(y){const bottom=()=>C.PH()-16;let ry=y,lb=y;
-   if(main){doc.setFillColor(241,245,249);doc.rect(M,y,lw,ph,'F');doc.addImage(main.data,imgFmt(main.data),M+(lw-pwid)/2,y,pwid,ph,undefined,'FAST');font(7.5,'bold',GREY);T(doc.splitTextToSize(main.cap,lw)[0],M,y+ph+4);lb=y+ph+6}
+   const pic=(im,x,y0)=>{const F=fit.get(im);doc.addImage(im.data,imgFmt(im.data),x+F.dx,y0,F.w,F.h,undefined,'FAST');font(7.5,'bold',GREY);T(doc.splitTextToSize(im.cap||'',lw)[0]||'',x,y0+F.h+4)};
+   if(main){pic(main,M,y);lb=y+ph+CAP}
    const brk=()=>{ry=C.newPage();lb=ry};
    for(const r of rows){if(ry+r.h>bottom())brk();r.cells.forEach((c,j)=>{const x=rx+j*(pw+6);font(7,'bold',GREY);T(c.l.toUpperCase(),x,ry+3.3);font(9,'normal',c.red?[190,18,60]:DARK);T(c.ls,x+labW,ry+3.3)});
     doc.setDrawColor(236,240,244);doc.setLineWidth(.2);doc.line(rx,ry+r.h,rx+rw,ry+r.h);ry+=r.h}
    for(const b of bl){ry+=3;if(ry+9>bottom())brk();font(7,'bold',b.col||GREY);T(b.label.toUpperCase(),rx,ry+2.6);ry+=4.5;font(9.5,'normal');for(const l of b.ls){if(ry+4.3>bottom()){brk();font(9.5,'normal')}T(l,rx,ry+3.2);ry+=4.3}}
    y=Math.max(ry,lb)+2;
-   for(let k=0;k<thumbs.length;k+=tp){if(y+th+7.5>bottom())y=C.newPage();for(let j=0;j<tp&&k+j<thumbs.length;j++){const im=thumbs[k+j],x=M+j*(tw+4);doc.setFillColor(241,245,249);doc.rect(x,y,tw,th,'F');const s=Math.min(tw/(im.w||4),th/(im.h||3)),w=(im.w||4)*s,h=(im.h||3)*s;doc.addImage(im.data,imgFmt(im.data),x+(tw-w)/2,y+(th-h)/2,w,h,undefined,'FAST');font(7,'normal',GREY);T(doc.splitTextToSize(im.cap,tw)[0],x,y+th+3.5)}y+=th+7.5}
+   for(const r of grid){if(y+r.h>bottom())y=C.newPage();r.ims.forEach((im,j)=>pic(im,gx[j],y));y+=r.h+3}
    return y}}}
 /* keep header bar (14 mm) + block together when it fits on a page; otherwise at least header + photo + first details */
 function pdfKeep(L,ensure,avail){ensure(14+(14+L.h<=avail?L.h:L.topH))}
