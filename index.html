@@ -1157,8 +1157,8 @@ const defaultInspector=()=>localStorage.getItem('sap.inspector')||currentUser().
 const auditFields=()=>[{k:'title',label:'Inspection title',req:true,full:true,ph:'e.g. Pre-handover inspection'},{k:'date',label:'Date',type:'date'},{k:'inspector',label:'Inspector'},{k:'weather',label:'Weather',type:'select',options:WEATHER},{k:'attendees',label:'Attendees / present'},{k:'notes',label:'Notes / general observations',type:'textarea',full:true},{k:'signature',label:'Inspector signature',type:'signature'}];
 function nextNumber(pid){return projItems(pid).reduce((m,i)=>Math.max(m,i.number||0),0)+1}
 async function newItem(auditId,extra={}){const a=byId('audits',auditId);const R=projRole(a.projectId);if(teamOn(byId('projects',a.projectId))&&R.desig&&!extra.raisedDesig)extra={raisedDesig:R.desig,...extra};const it={id:uid(),auditId,projectId:a.projectId,number:nextNumber(a.projectId),title:'',description:'',location:'',category:'',subcategory:'',defectType:'',priority:'Medium',phase:'',status:'Open',assignee:'',dueDate:'',photos:[],pin:null,...extra};await save('items',it);return it}
-async function deleteItem(it){for(const ph of it.photos||[])await delPhoto(ph,it.projectId);await remove('items',it.id)}
-async function deleteAudit(a){for(const it of auditItems(a.id))await deleteItem(it);for(const c of S.checklists.filter(c=>c.auditId===a.id))await remove('checklists',c.id);await remove('audits',a.id)}
+async function deleteItem(it,renum=true){for(const ph of it.photos||[])await delPhoto(ph,it.projectId);await remove('items',it.id);return renum?fixNumbers(it.projectId):0}
+async function deleteAudit(a){for(const it of auditItems(a.id))await deleteItem(it,false);for(const c of S.checklists.filter(c=>c.auditId===a.id))await remove('checklists',c.id);await remove('audits',a.id);await fixNumbers(a.projectId)}
 async function deleteDrawing(d){for(const it of S.items.filter(i=>i.pin&&i.pin.drawingId===d.id)){it.pin=null;await save('items',it)}await delPhoto(d.imageId,d.projectId);await remove('drawings',d.id)}
 async function deleteProject(p){for(const a of S.audits.filter(a=>a.projectId===p.id))await deleteAudit(a);for(const d of S.drawings.filter(d=>d.projectId===p.id))await deleteDrawing(d);await remove('projects',p.id)}
 async function editTemplate(t){const txt=t?t.questions.map(q=>(q.section?'# ':'')+q.text).join('\n'):'# Section 1\nQuestion one\nQuestion two';
@@ -1201,7 +1201,7 @@ const ACT={
  'del-audit':async el=>{const a=byId('audits',el.dataset.id);if(!await confirmBox(`Delete inspection “${a.title}” and all its issues?`))return;await deleteAudit(a);location.hash='#/project/'+a.projectId},
  'new-item':async el=>{const fr=el.dataset.from&&byId('items',el.dataset.from);const it=await newItem(el.dataset.id,fr&&fr.phase?{phase:fr.phase}:{});location.hash='#/item/'+it.id;setTimeout(()=>{const t=$('[name=title]');t&&t.focus()},60)},
  'dup-item':async el=>{const s=byId('items',el.dataset.id);const it=await newItem(s.auditId,{title:s.title+' (copy)',description:s.description,location:s.location,category:s.category,subcategory:s.subcategory||'',defectType:s.defectType||'',priority:s.priority,phase:s.phase||'',assignee:s.assignee,dueDate:s.dueDate});location.hash='#/item/'+it.id},
- 'del-item':async el=>{const it=byId('items',el.dataset.id);if(!canDeleteItem(it))return;if(!await confirmBox(`Delete issue #${it.number}?`))return;await deleteItem(it);location.hash='#/audit/'+it.auditId},
+ 'del-item':async el=>{const it=byId('items',el.dataset.id);if(!canDeleteItem(it))return;if(!await confirmBox(`Delete issue #${it.number}?`))return;const n=await deleteItem(it);toast(n?'Issue deleted – later issues renumbered':'Issue deleted',2200);location.hash='#/audit/'+it.auditId},
  'del-photo':async el=>{if(!await confirmBox('Delete this photo?'))return;const it=byId('items',el.dataset.id);it.photos=it.photos.filter(p=>p!==el.dataset.ph);await delPhoto(el.dataset.ph,it.projectId);await save('items',it);render()},
  'photo-first':async el=>{const it=byId('items',el.dataset.id);it.photos=[el.dataset.ph,...it.photos.filter(p=>p!==el.dataset.ph)];UI.ivSel={id:it.id,k:0};await save('items',it);render()},
  annotate:async el=>{if(await annotate(el.dataset.ph)){const it=byId('items',el.dataset.id);await save('items',it);render()}},
@@ -1623,7 +1623,7 @@ const Sync={state:'idle',msg:'',
  now(manual){if(!Dbx.connected())return Promise.resolve();if(this._p){this._again=true;return this._p}
   this._p=(async()=>{do{this._again=false;await this.run(manual)}while(this._again)})().finally(()=>{this._p=null});return this._p},
  async run(manual){if(!navigator.onLine){this.setState('offline');return}this.setState('syncing');
-  try{await Dbx.ensureFolder();this._runLoc=new Map();let changed=await this.pull();if(await this.regRead())changed=true;if(await this.linkedPull())changed=true;await this.push();await this.regWrite();if(await this.coSync())changed=true;await this.flushPdfQueue();await this.photos();await this.linkedPhotos();
+  try{await Dbx.ensureFolder();this._runLoc=new Map();let changed=await this.pull();if(await this.regRead())changed=true;if(await this.linkedPull())changed=true;if(await fixAllNumbers())changed=true;await this.push();await this.regWrite();if(await this.coSync())changed=true;await this.flushPdfQueue();await this.photos();await this.linkedPhotos();
    SM.lastSync=Date.now();await DB.put('meta',SM);this.setState('ok');if(changed)safeRender();if(manual)toast('Dropbox sync complete',1400)}
   catch(e){console.warn('Sync failed:',e);await DB.put('meta',SM).catch(()=>{});
    if(e.kind==='offline'){this.setState('offline')}else if(e.kind==='noaccess'){this.setState('noaccess',e.message);if(manual)alertBox(e.message,'Company folder')}else if(e.kind==='auth'){this.setState('auth',e.message);if(manual)alertBox(e.message)}
@@ -1702,10 +1702,16 @@ const Sync={state:'idle',msg:'',
 };
 function timeAgo(t){const s=(Date.now()-t)/1000;return s<45?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':fmtDate(t)}
 function safeRender(){const a=document.activeElement;if(a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){toast('Synced changes from another device – they appear when you leave this field',2500);return}if(document.querySelector('.modal-back,.annot,.report-frame')||(UI.viewer&&UI.viewer.adding&&location.hash.startsWith('#/drawing')))return;render()}
-function fixNumbers(pid){/* two users created issues at the same moment → same number. Deterministic: earliest (createdAt,id) keeps it, later ones get next free numbers */
- const its=projItems(pid).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)||(a.id<b.id?-1:1));const seen=new Set();let max=its.reduce((m,i)=>Math.max(m,i.number||0),0);const fix=[];
- for(const i of its){if(seen.has(i.number))fix.push(i);else seen.add(i.number)}
- return(async()=>{for(const i of fix){const old=i.number;i.number=++max;await save('items',i,{keepBy:true});toast(`Issue #${old} “${i.title||'Untitled'}” was renumbered to #${i.number} (numbered at the same time on another device)`,4000)}return fix.length})()}
+/* Issue numbers: ONE sequence per project (#1..#N, no gaps), computed over ALL issues of the project stored on this device – including
+ issues hidden by trade scoping or filters (S.items is never filtered); deleted (tombstoned) issues are not in S.items.
+ Deterministic: sort by (number, createdAt, id) and reassign 1..N. Only records whose number changes are written (new updatedAt → synced).
+ Runs after a delete and after every sync merge on every device, so devices converge on the same numbering (identical input → identical
+ output, and an unchanged number is never re-written, so there is no ping-pong). New issues take max+1. */
+function numOrder(a,b){return(a.number||1e9)-(b.number||1e9)||(a.createdAt||0)-(b.createdAt||0)||(a.id<b.id?-1:a.id>b.id?1:0)}
+async function fixNumbers(pid){const p=byId('projects',pid);if(!p||p.stub)return 0;const R=projRole(p);if(R.mode==='none'||R.ro)return 0;
+ const its=projItems(pid).slice().sort(numOrder);let n=0;for(const[k,i]of its.entries())if(i.number!==k+1){i.number=k+1;await save('items',i,{keepBy:true});n++}
+ if(n)cropCache.clear();return n}
+async function fixAllNumbers(){let n=0;for(const p of S.projects.slice())n+=await fixNumbers(p.id);return n}
 const DBX_LOGO='<svg viewBox="0 0 24 24" width="22" height="22" fill="#0061fe"><path d="M6 2 0 6l6 4 6-4zm12 0-6 4 6 4 6-4zM0 14l6 4 6-4-6-4zm18-4-6 4 6 4 6-4zM6 19.3l6 4 6-4-6-4z"/></svg>';
 function dbxSettingsHTML(){const t=Dbx.tok(),con=Dbx.connected(),a=t&&t.account||{};
  return`<div class="card pad" style="margin-top:16px" id="dbx-card"><h2 style="margin-top:0;font-size:17px;display:flex;align-items:center;gap:8px">${DBX_LOGO}Company Dropbox sync</h2>
@@ -1760,7 +1766,7 @@ Object.assign(ACT,{
 /* ===== Init ===== */
 (async()=>{try{await DB.open();await loadAll();await seed();if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){console.error(e);$('#app').innerHTML=emptyHTML('Storage unavailable','This browser blocked local storage (IndexedDB), e.g. in private mode. '+e.message);return}
  {const t=Dbx.tok();if(t&&t.v!==2){Dbx.setTok(null);localStorage.removeItem('sap.dbx.loc');await Sync.resetMeta()}}
- window.addEventListener('hashchange',render);const fromLogin=await Dbx.handleRedirect();render();Sync.pill();window.__ready=true;
+ window.addEventListener('hashchange',render);const fromLogin=await Dbx.handleRedirect();render();Sync.pill();window.__ready=true;if(!Dbx.connected())fixAllNumbers().then(n=>{if(n)safeRender()}).catch(console.warn);
  if(!fromLogin&&Dbx.connected()&&Dbx.configured()){Sync.now()}
  window.addEventListener('online',()=>{if(Dbx.connected())Sync.now()});window.addEventListener('offline',()=>{if(Dbx.connected())Sync.setState('offline')});
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Dbx.connected()&&Dbx.prefs().autoSync&&Date.now()-(SM.lastSync||0)>60000)Sync.now()});
@@ -2202,7 +2208,7 @@ async function flagDialog(it,{fromNew=false}={}){const p=byId('projects',it.proj
   const added=[];for(const fl of newFiles){const rr=await resizeImage(await imgDataURL(fl),1600);added.push((await putPhoto({id:uid(),...rr,createdAt:Date.now()})).id)}
   let target;
   if(r.mode==='link'){const copies=[];for(const id of r.ph){const ph=await getPhoto(id);if(ph)copies.push((await putPhoto({id:uid(),data:ph.data,w:ph.w,h:ph.h,createdAt:Date.now()})).id)}
-   target=await newItem(it.auditId,{title:it.title,description:[r.note,`Raised from #${it.number}${it.category?' ('+it.category+')':''}.`].filter(Boolean).join('\n\n'),location:it.location,priority:it.priority,phase:it.phase||'',pin:it.pin?{...it.pin}:null,category:r.toTrade,photos:[...copies,...added],flag:{...f,fromItem:it.id}});
+   target=await newItem(it.auditId,{title:it.title,description:[r.note,`Raised from the ${it.category?it.category+' ':''}issue “${it.title||'Untitled'}”.`].filter(Boolean).join('\n\n'),location:it.location,priority:it.priority,phase:it.phase||'',pin:it.pin?{...it.pin}:null,category:r.toTrade,photos:[...copies,...added],flag:{...f,fromItem:it.id}});
    it.links=[...(it.links||[]),{id:target.id,trade:r.toTrade}];await save('items',it)}
   else{it.photos=[...(it.photos||[]),...added];f.fromCls=clsParts(it);it.category=r.toTrade;it.subcategory='';it.defectType='';it.flag=f;await save('items',it);target=it}
   done();toast(`Flagged to ${r.toTrade}${f.toName?' – '+f.toName:''}. They'll see it after their next sync.`,3500);location.hash='#/item/'+target.id;render()}catch(e){done();alertBox('Could not flag: '+e.message)}}
@@ -2216,7 +2222,7 @@ async function flagReturn(it){const R=roleOfItem(it),f=it.flag;const r=await for
  if(!f.fromItem){it.category=f.fromTrade||'';it.subcategory='';it.defectType='';if(f.fromCls&&f.fromCls[0]===f.fromTrade){it.subcategory=f.fromCls[1]||'';it.defectType=f.fromCls[2]||''}}else it.category=f.fromTrade||'';
  await save('items',it);toast('Returned with your note');const back=canSeeItem(it);location.hash=back?'#/item/'+it.id:'#/audit/'+it.auditId;render()}
 async function flagWithdraw(it){if(!await confirmBox('Withdraw this flag? The issue goes back to '+(it.flag.fromTrade||'you')+'.','Withdraw','Withdraw flag'))return;const f=it.flag;
- if(f.fromItem){if(!await confirmBox('This is a linked copy – delete it?','Delete'))return;const src=byId('items',f.fromItem);if(src){src.links=(src.links||[]).filter(l=>l.id!==it.id);await save('items',src)}await deleteItem(it);location.hash='#/item/'+f.fromItem;return}
+ if(f.fromItem){if(!await confirmBox('This is a linked copy – delete it?','Delete'))return;const src=byId('items',f.fromItem);if(src){src.links=(src.links||[]).filter(l=>l.id!==it.id);await save('items',src)}const n=await deleteItem(it);toast(n?'Issue deleted – later issues renumbered':'Issue deleted',2200);location.hash='#/item/'+f.fromItem;return}
  it.category=f.fromTrade||'';it.subcategory=f.fromCls&&f.fromCls[0]===f.fromTrade?f.fromCls[1]||'':'';it.defectType=f.fromCls&&f.fromCls[0]===f.fromTrade?f.fromCls[2]||'':'';delete it.flag;await save('items',it);render()}
 Object.assign(ACT,{
  'flag-item':el=>flagDialog(byId('items',el.dataset.id)),
