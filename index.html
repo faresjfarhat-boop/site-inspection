@@ -895,7 +895,8 @@ function bundleOf(store,r){if(store==='settings')return'settings';if(store==='te
 async function addTomb(key,bundle,ts=Date.now()){const t={id:key,bundle,deletedAt:ts};await DB.put('tombstones',t);TOMBS.set(key,t);Sync.markDirty(bundle)}
 const BY_STORES=['projects','audits','items','checklists','drawings'];
 function currentUser(){const t=typeof Dbx!=='undefined'&&Dbx.tok();const a=t&&t.account;return a?{name:a.name||a.email||'',email:a.email||''}:{name:localStorage.getItem('sap.inspector')||'',email:''}}
-async function save(store,o,opt={}){const isNew=!o.createdAt;o.updatedAt=Math.max(Date.now(),(o.updatedAt||0)+1);if(isNew)o.createdAt=o.updatedAt;
+async function save(store,o,opt={}){if(store==='items'&&!opt.raw){if(o.status==='Closed'){if(!o.closedAt){const prev=o.createdAt?await DB.get('items',o.id):null;if(!prev||prev.status!=='Closed')o.closedAt=Date.now()}}else if(o.closedAt)delete o.closedAt} /* closing date recorded from now on (old closed issues: reports fall back to updatedAt) */
+ const isNew=!o.createdAt;o.updatedAt=Math.max(Date.now(),(o.updatedAt||0)+1);if(isNew)o.createdAt=o.updatedAt;
  if(BY_STORES.includes(store)&&!opt.keepBy){const w=currentUser();if(w.name){o.updatedBy=w.name;o.updatedByEmail=w.email;if(isNew){o.createdBy=w.name;o.createdByEmail=w.email}}}await DB.put(store,o);const a=S[store];const i=a.findIndex(x=>x.id===o.id);if(i>=0)a[i]=o;else a.push(o);const b=bundleOf(store,o);if(b)Sync.markDirty(b);return o}
 async function remove(store,id){const rec=S[store].find(x=>x.id===id);const b=rec&&bundleOf(store,rec);await DB.del(store,id);S[store]=S[store].filter(x=>x.id!==id);if(b)await addTomb(store+':'+id,b)}
 async function saveSettings(){S.settings.id='main';S.settings.updatedAt=Date.now();await DB.put('settings',S.settings);Sync.markDirty('settings')}
@@ -1355,10 +1356,10 @@ async function reportDialog(scope){const isA=scope.type==='audit';const obj=byId
  const chk=(k,l,on=true)=>`<label class="chk"><input type="checkbox" name="${k}" ${on?'checked':''}> ${l}</label>`;
  const r=await modal({title:'Generate report',wide:true,body:`<div class="form-grid"><label class="full"><span>Report title</span><input name="title" value="${esc(isA?p.name+' – '+obj.title:p.name)}"></label>
  <label><span>Report type (cover subtitle)</span><input name="subtitle" value="${isA?'Site Inspection Report':'Project Inspection Report'}" list="dl-sub"><datalist id="dl-sub"><option value="Site Inspection Report"><option value="Snagging Report"><option value="Punch List"><option value="Health & Safety Inspection"><option value="Property Condition Report"><option value="Defects Report"></datalist></label>
- <label><span>Theme colour</span><select name="color">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${v===(S.settings.reportColor||THEMES.Blue)?'selected':''}>${k}</option>`).join('')}</select></label>
+ <label><span>Theme colour</span><select name="color">${themeOpts(p)}</select></label>
  
  <label><span>Issue order</span><select name="sort"><option value="number">By number</option><option value="priority">By importance</option><option value="phase">By priority (phase)</option><option value="location">By location</option></select></label>
- ${chk('closed','Include closed issues')}${chk('summary','Summary table')}${chk('photos','Photos')}${chk('pinrefs','Drawing location thumbnail per issue')}${chk('drawings','Drawings with pins')}${chk('checklists','Checklists')}</div>
+ ${chk('closed','Include closed issues')}${chk('summary','Summary table')}${chk('photos','Photos')}${chk('pinrefs','Drawing location thumbnail per issue')}${chk('drawings','Drawings with pins')}${chk('checklists','Checklists')}${chk('charts','Include charts')}</div>
  <p class="help">PDF downloads a file you can share by email / WhatsApp. Print view opens a printable page (use “Save as PDF” in the print dialog).</p>`,
  buttons:[{label:'Cancel',value:null},{label:'CSV',value:'csv'},{label:'Print view',value:'print'},...(Dbx.connected()?[{label:'Save PDF to Dropbox',value:'dbx'}]:[]),{label:'Download PDF',value:'pdf',cls:'primary'}],
  collect:(el,v)=>{const o={};$$('input,select',el).forEach(i=>o[i.name]=i.type==='checkbox'?i.checked:i.value);return{v,o}}});
@@ -1368,7 +1369,7 @@ async function reportDialog(scope){const isA=scope.type==='audit';const obj=byId
  const toDbx=r.v==='dbx';const done=busy(toDbx?'Generating PDF for Dropbox…':'Generating PDF…');try{const doc=await generatePDF(d,r.o,{noDownload:toDbx});if(!toDbx)toast('PDF report downloaded');done();
   if(Dbx.connected()&&(toDbx||Dbx.prefs().autoPdf))await Sync.uploadReport(doc.output('blob'),d,r.o)}catch(e){console.error(e);alertBox('PDF generation failed: '+e.message)}finally{done()}}
 
-async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});
+async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});window.__lastChartBoxes=[];window.__lastCharts=[];
  const acc=hex2rgb(o.color),light=mix(acc,.88),M=14,p=d.project,a=d.audit;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
  const T=(t,x,yy,op)=>doc.text(Array.isArray(t)?t:String(t??''),x,yy,op);
  const font=(sz,st='normal',col=DARK)=>{doc.setFont('helvetica',st);doc.setFontSize(sz);doc.setTextColor(...col)};
@@ -1379,27 +1380,27 @@ async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new j
  const chipW=l=>{font(7.5,'bold');return doc.getTextWidth(l)+5};
  const chip=(l,x,yy,col)=>{const w=chipW(l);doc.setFillColor(...hex2rgb(col));doc.roundedRect(x,yy-3.7,w,5.2,1.3,1.3,'F');font(7.5,'bold',[255,255,255]);T(l,x+2.5,yy);return w};
  const co=coInfo(coOf(p)),company=co.name;
- /* cover */
- doc.setFillColor(...acc);doc.rect(0,0,PW,80,'F');const lw=await pdfCoverLogos(doc,co,p,PW,M);
- font(10,'bold',[255,255,255]);T((o.subtitle||'Site Inspection Report').toUpperCase(),M,22);
- font(22,'bold',[255,255,255]);const tl=doc.splitTextToSize(o.title||p.name,PW-2*M-lw).slice(0,3);T(tl,M,33);
- font(10.5,'normal',[255,255,255]);const sub=[p.client,p.address].filter(Boolean).join('  ·  ');if(sub)T(doc.splitTextToSize(sub,PW-2*M-lw)[0],M,33+tl.length*8.5+1);
- if(company){font(10,'bold',[255,255,255]);T(doc.splitTextToSize('Inspecting company: '+company,PW-2*M-lw)[0],M,66)}font(9,'normal',[255,255,255]);T('Generated '+fmtDT(Date.now()),M,72);
- y=94;const rows=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)]];
- if(a)rows.push(['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]);else rows.push(['Inspections included',d.audits.map(x=>`${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')]);
+ /* cover: large company logo, accent title block, key numbers */
+ const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length,dts=d.audits.map(x=>x.date).filter(Boolean).sort();
+ const cl=[[[p.code?'Project '+p.code:'',p.reference?'Ref '+p.reference:'',p.client?'Client: '+p.client:''].filter(Boolean).join('  ·  ')],
+  [a?`${a.title}${a.date?'  ·  '+fmtDate(a.date):''}${a.inspector?'  ·  '+a.inspector:''}`:`${rcPlural(d.audits.length,'inspection')}${dts.length?'  ·  '+fmtDate(dts[0])+(dts[dts.length-1]!==dts[0]?' – '+fmtDate(dts[dts.length-1]):''):''}`],[company?'Inspecting company: '+company:'',1]].filter(l=>l[0]);
+ y=await pdfCover(doc,{co,p,acc,M,font,T,kicker:o.subtitle||'Site Inspection Report',title:o.title||p.name,lines:cl,when:'Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),all});
+ const rows=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)]];
+ if(a)rows.push(['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]);else rows.push(['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${insCode(x.id)} · ${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')]);
  rows.push(['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]);
- for(const[k,v]of rows.filter(r=>r[1])){font(10,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,6);const h=Math.max(7,ls.length*4.6+2.6);font(8.5,'bold',GREY);T(k.toUpperCase(),M,y);font(10,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4.2,PW-M,y+h-4.2);y+=h}
- const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length;y+=4;
- const st=[['Total issues',all.length,DARK],['Open',cnt('Open'),[220,38,38]],['In progress',cnt('In Progress'),[217,119,6]],['Closed',cnt('Closed'),[22,163,74]],['Overdue',all.filter(isOver).length,[159,18,57]]];const bw=(PW-2*M-16)/5;
- st.forEach(([l,n,c],k)=>{const x=M+k*(bw+4);doc.setFillColor(246,248,251);doc.setDrawColor(222,228,234);doc.roundedRect(x,y,bw,20,2,2,'FD');font(18,'bold',c);T(String(n),x+bw/2,y+10,{align:'center'});font(7.5,'bold',GREY);T(l.toUpperCase(),x+bw/2,y+16,{align:'center'})});y+=27;
+ for(const[k,v]of rows.filter(r=>r[1])){font(9.5,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,6);const h=Math.max(6.4,ls.length*4.3+2.4);ensure(h);font(8,'bold',GREY);T(k.toUpperCase(),M,y);font(9.5,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4,PW-M,y+h-4);y+=h}
+ y+=3;ensure(16);
  const op=all.filter(i=>i.status!=='Closed');font(9,'normal',GREY);T(`Open issues by importance:  Critical ${op.filter(i=>i.priority==='Critical').length}  ·  High ${op.filter(i=>i.priority==='High').length}  ·  Medium ${op.filter(i=>i.priority==='Medium').length}  ·  Low ${op.filter(i=>i.priority==='Low').length}${all.length?`   |   ${Math.round(cnt('Closed')/all.length*100)}% complete`:''}`,M,y);y+=5;T(`Open issues by priority:  ${PHASES.map(p=>`Phase ${p} ${op.filter(i=>i.phase===p).length}`).join('  ·  ')}  ·  Not set ${op.filter(i=>!i.phase).length}`,M,y);y+=6;
  const trc=tradeCounts(all);if(trc.length){font(9,'normal',GREY);for(const l of doc.splitTextToSize('Issues by trade:  '+trc.map(([t,n])=>`${t} ${n}`).join('  ·  '),PW-2*M)){T(l,M,y);y+=4.6}y+=1.4}
  if(!o.closed&&cnt('Closed'))
   {font(8,'italic',GREY);T(`Closed issues (${cnt('Closed')}) are excluded from this report's issue list.`,M,y);y+=6}
  const notes=[a?a.notes:'',p.notes].filter(Boolean).join('\n\n');if(notes){y+=3;font(8.5,'bold',GREY);T('NOTES',M,y);y+=5;font(9.5,'normal');for(const l of doc.splitTextToSize(notes,PW-2*M)){ensure(5);T(l,M,y);y+=4.4}}
+ if(!all.length){y+=2;ensure(8);font(9,'italic',GREY);T('No issues are recorded for this report.',M,y);y+=6}
+ /* executive summary: charts (vector, drawn natively) */
+ if(o.charts!==false&&all.length){newPage();heading('Executive summary');const r=pdfExecSummary(doc,{M,acc:o.color||THEMES.Blue,items:all,progress:rcSpansDays(all,d.audits),y,newPage:()=>newPage(),top:()=>y});y=r.y;var contY=y<PH-90;window.__lastCharts=rcCharts(all,{progress:rcSpansDays(all,d.audits)}).map(c=>c.id)}
  const items=d.items;
  /* summary */
- if(o.summary&&items.length){newPage();heading('Summary of issues');const cols=[['#',10],['Issue',34],['Location',22],['Trade',23],['Importance',18],['Priority',14],['Status',19],['Assignee',21],['Due',21]];
+ if(o.summary&&items.length){if(typeof contY!=='undefined'&&contY)y+=6;else newPage();heading('Summary of issues');const cols=[['#',10],['Issue',34],['Location',22],['Trade',23],['Importance',18],['Priority',14],['Status',19],['Assignee',21],['Due',21]];
   const head=()=>{doc.setFillColor(...acc);doc.rect(M,y,PW-2*M,7,'F');font(8,'bold',[255,255,255]);let x=M;cols.forEach(([t,w])=>{T(t,x+1.5,y+4.8);x+=w});y+=7};head();
   items.forEach((it,ix)=>{font(8,'normal');const v=[a?'#'+it.number:issueRef(it),it.title||'Untitled',it.location,[it.category,it.defectType].filter(Boolean).join('\n'),it.priority,phaseLabel(it.phase),it.status,it.assignee,fmtDate(it.dueDate)];const ls=v.map((s,c)=>doc.splitTextToSize(String(s||'–'),cols[c][1]-3).slice(0,4));const h=Math.max(...ls.map(l=>l.length))*3.4+3.2;
    if(y+h>PH-16){newPage();head()}if(ix%2){doc.setFillColor(246,248,251);doc.rect(M,y,PW-2*M,h,'F')}let x=M;
@@ -1450,9 +1451,11 @@ h2{color:${acc};border-bottom:2px solid ${acc};padding-bottom:4px;margin:24px 0 
 table{width:100%;border-collapse:collapse;font-size:9pt}th{background:${acc};color:#fff;text-align:left;padding:5px}td{padding:5px;border-bottom:1px solid #e2e8f0;vertical-align:top}tr:nth-child(even) td{background:#f6f8fb}
 .item{break-inside:avoid;page-break-inside:avoid;margin-bottom:16px;border-bottom:1px solid #e2e8f0;padding-bottom:12px}.ih{background:${lt};border-left:5px solid ${acc};padding:7px 10px;font-weight:bold;font-size:12pt;display:flex;justify-content:space-between;gap:8px;align-items:center}.ih .n{color:${acc}}
 .fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;margin:8px 0}.fields small{display:block;color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase}.imgs{display:grid;grid-template-columns:47% 47%;column-gap:14px;row-gap:8px;margin-top:8px;align-items:start}.ib{display:grid;grid-template-columns:47% 1fr;gap:14px;margin-top:8px;align-items:start}.ib.nophoto{grid-template-columns:1fr}.ib .main figure{margin:0}.ib .main img{width:auto;max-width:100%;height:auto;max-height:110mm;display:block;margin:0 auto}.ib .main figcaption{font-weight:bold;margin-top:3px}.kv{display:grid;grid-template-columns:28mm 1fr;gap:3px 8px;font-size:9.5pt}.nophoto .kv{grid-template-columns:28mm 1fr 28mm 1fr}.kv small,small.bl{color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase;padding-top:2px}small.bl{display:block;margin-top:10px}.kv .over{color:#be123c;font-weight:bold}.imgs figure{margin:0}.imgs img{width:auto;max-width:100%;height:auto;max-height:110mm;display:block;margin:0 auto}.imgs figure,.ib .main figure{break-inside:avoid;page-break-inside:avoid}.imgs figcaption{font-weight:bold;margin-top:3px}figcaption{font-size:8pt;color:#667}
+${RC_CSS}:root{--acc:${acc}}
 .chip{color:#fff;border-radius:4px;padding:1px 7px;font-size:8.5pt;margin-left:4px;white-space:nowrap}.pb{break-before:page;page-break-before:always}.dw img{max-width:100%;max-height:235mm;display:block;margin:auto;border:1px solid #ccd}.desc{white-space:pre-wrap}.sec td{background:${lt}!important;font-weight:bold;color:${acc}}
 </style></head><body><div class="cover"><div><div style="font-weight:bold;letter-spacing:.06em">${esc((o.subtitle||'').toUpperCase())}</div><h1>${esc(o.title)}</h1><div>${esc([p.client,p.address].filter(Boolean).join(' · '))}</div>${co.name?`<div class="co">Inspecting company: ${esc(co.name)}</div>`:''}</div>${logo||clogo?`<div class="lgs">${logo?`<div class="lg"><img src="${logo}" alt="${esc(co.name)}"></div>`:''}${clogo?`<div class="lg"><img src="${clogo}" alt=""></div>`:''}</div>`:''}</div>
 <dl>${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="stats"><div><b>${all.length}</b>Total</div><div><b style="color:#dc2626">${cnt('Open')}</b>Open</div><div><b style="color:#d97706">${cnt('In Progress')}</b>In progress</div><div><b style="color:#16a34a">${cnt('Closed')}</b>Closed</div><div><b style="color:#9f1239">${all.filter(isOver).length}</b>Overdue</div></div>${tradeCounts(all).length?`<p style="font-size:9pt;color:#556"><b>Issues by trade:</b> ${tradeCounts(all).map(([t,n])=>esc(t)+' '+n).join(' · ')}</p>`:''}${[a?a.notes:'',p.notes].filter(Boolean).map(n=>`<p class="desc">${esc(n)}</p>`).join('')}`;
+ if(o.charts!==false&&all.length)h+=`<h2 class="pb">Executive summary</h2>${svgExecSummary(all,{acc,progress:rcSpansDays(all,d.audits)})}`;
  const items=d.items;if(o.summary&&items.length)h+=`<h2 class="pb">Summary of issues</h2><table><tr><th>#</th><th>Issue</th><th>Location</th><th>Trade</th><th>Importance</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due</th></tr>${items.map(i=>`<tr><td><b>${a?'#'+i.number:issueRef(i)}</b></td><td>${esc(i.title)}</td><td>${esc(i.location)}</td><td>${esc(i.category)}${i.defectType?`<br><small>${esc(i.defectType)}</small>`:''}</td><td style="color:${PRIO_COLOR[i.priority]};font-weight:bold">${i.priority}</td><td>${phaseLabel(i.phase)||'–'}</td><td style="color:${STATUS_COLOR[i.status]};font-weight:bold">${i.status}</td><td>${esc(i.assignee)}</td><td ${isOver(i)?'style="color:#be123c;font-weight:bold"':''}>${fmtDate(i.dueDate)}</td></tr>`).join('')}</table>`;
  if(items.length){h+=`<h2 class="pb">Issue details</h2>`;for(const i of items){const dr=i.pin&&byId('drawings',i.pin.drawingId);const figs=[];if(o.photos)for(const[n,id]of(i.photos||[]).entries()){const ph=await getPhoto(id);if(ph)figs.push(`<figure><img src="${ph.data}" alt=""><figcaption>${esc(photoName(i,n,!a))}</figcaption></figure>`)}
   const main=figs.shift()||'';if(o.pinrefs&&dr){const c=await drawingCanvas(dr,[i],{crop:i.pin,maxW:600});figs.push(`<figure><img src="${c.toDataURL('image/jpeg',.85)}"><figcaption>Location: ${esc(dr.name)}</figcaption></figure>`)}
@@ -2587,11 +2590,11 @@ async function conDialog(pid){const p=byId('projects',pid),R=projRole(p);if(R.mo
  const r=await modal({title:R.admin?'Consolidated report':'Report – my trades',wide:true,body:`<div class="form-grid"><label class="full"><span>Report title</span><input name="title" value="${esc(p.name+' – Consolidated inspection report')}"></label>
   ${R.admin?'':`<p class="help full" style="margin:0">Includes only the issues you can see: ${esc(roleScopeText(p))}</p>`}
   <div class="full"><span class="small muted">Inspections</span><div class="con-aud">${aus.map(a=>`<label class="chk"><input type="checkbox" name="aud" value="${a.id}" checked> ${esc(a.title)} <span class="muted small">${fmtDate(a.date)}</span></label>`).join('')||'<p class="help">No inspections yet.</p>'}</div></div>
-  <label><span>Theme colour</span><select name="color">${Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${v===(S.settings.reportColor||THEMES.Blue)?'selected':''}>${k}</option>`).join('')}</select></label>
+  <label><span>Theme colour</span><select name="color">${themeOpts(p)}</select></label>
   
-  <label class="chk"><input type="checkbox" name="closed" checked> Include closed issues</label><label class="chk"><input type="checkbox" name="photos" checked> Photos</label></div>`,
+  <label class="chk"><input type="checkbox" name="closed" checked> Include closed issues</label><label class="chk"><input type="checkbox" name="photos" checked> Photos</label><label class="chk"><input type="checkbox" name="charts" checked> Include charts</label></div>`,
   buttons:[{label:'Cancel',value:null},{label:'CSV',value:'csv'},...(Dbx.connected()?[{label:'Save PDF to Dropbox',value:'dbx'}]:[]),{label:'Download PDF',value:'pdf',cls:'primary'}],
-  collect:(el,v)=>({v,o:{title:el.querySelector('[name=title]').value.trim()||p.name,color:el.querySelector('[name=color]').value,closed:el.querySelector('[name=closed]').checked,photos:el.querySelector('[name=photos]').checked,audits:$$('[name=aud]:checked',el).map(x=>x.value)}})});
+  collect:(el,v)=>({v,o:{title:el.querySelector('[name=title]').value.trim()||p.name,color:el.querySelector('[name=color]').value,closed:el.querySelector('[name=closed]').checked,photos:el.querySelector('[name=photos]').checked,charts:el.querySelector('[name=charts]').checked,audits:$$('[name=aud]:checked',el).map(x=>x.value)}})});
  if(!r)return;if(!r.o.audits.length)return alertBox('Choose at least one inspection.');const d=conData(pid,r.o);
  if(r.v==='csv')return download(`${safeName(d.fileName)}.csv`,conCsvBlob(d.items,p));
  const toDbx=r.v==='dbx';const done=busy('Generating consolidated report…');try{const doc=await conPDF(d,r.o,{noDownload:toDbx});if(!toDbx)toast('PDF report downloaded');done();if(Dbx.connected()&&(toDbx||Dbx.prefs().autoPdf))await Sync.uploadReport(doc.output('blob'),d,r.o)}catch(e){console.error(e);alertBox('PDF generation failed: '+e.message)}finally{done()}}
@@ -2599,7 +2602,7 @@ function conCsvBlob(items,p){const cols=['Project code','Project','Inspection','
  const q=v=>{v=String(v??'');return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};const iso=t=>t?new Date(t).toISOString():'';
  const rows=items.map(i=>{const a=byId('audits',i.auditId),f=i.flag||{},m=(p.team||[]).find(x=>eqEmail(x.email,i.createdByEmail));return[p.code||'',p.name,a&&a.title,i.number,issueRef(i),i.title,i.description,i.location,i.category,i.subcategory,i.defectType,i.priority,phaseLabel(i.phase),i.status,i.createdBy||'',i.createdByEmail||'',i.raisedDesig||(m?m.designation:''),f.status||'',f.byName||f.byEmail||'',f.fromTrade||'',f.toTrade||'',f.toName||'',f.note||'',iso(f.at),f.returnNote||'',i.assignee,i.dueDate,isOver(i)?'Yes':'No',(i.photos||[]).length,iso(i.createdAt),iso(i.updatedAt),iso(i.closedAt),(i.photos||[]).map((x,k)=>photoName(i,k,true)).join('; '),coName(p)]});
  return new Blob(['\ufeff'+[cols,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})}
-async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});const acc=hex2rgb(o.color||THEMES.Blue),light=mix(acc,.88),M=14,p=d.project;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
+async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});window.__lastStrips=[];window.__lastChartBoxes=[];window.__lastCharts=[];const acc=hex2rgb(o.color||THEMES.Blue),light=mix(acc,.88),M=14,p=d.project;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
  const T=(t,x,yy,op)=>doc.text(Array.isArray(t)?t:String(t??''),x,yy,op);const font=(sz,st='normal',col=DARK)=>{doc.setFont('helvetica',st);doc.setFontSize(sz);doc.setTextColor(...col)};
  const newPage=()=>{doc.addPage('a4','portrait');y=M+4};const ensure=h=>{if(y+h>PH-16){newPage();return true}return false};
  const heading=t=>{ensure(18);font(15,'bold',acc);T(t,M,y+5);doc.setDrawColor(...acc);doc.setLineWidth(.6);doc.line(M,y+8,PW-M,y+8);y+=15};
@@ -2609,18 +2612,18 @@ async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF(
   rows.forEach((v,ix)=>{font(8,'normal');const ls=v.map((s,c)=>doc.splitTextToSize(String(s??'–')||'–',cols[c][1]-3).slice(0,5));const h=Math.max(...ls.map(l=>l.length))*3.4+3.2;if(y+h>PH-16){newPage();head()}if(ix%2){doc.setFillColor(246,248,251);doc.rect(M,y,PW-2*M,h,'F')}
    let x=M;ls.forEach((l,c)=>{const cc=colour&&colour(v,c);font(8,cc?'bold':c===0?'bold':'normal',cc||DARK);T(l,x+1.5,y+4.2);x+=cols[c][1]});doc.setDrawColor(226,232,240);doc.setLineWidth(.2);doc.line(M,y+h,PW-M,y+h);y+=h})};
  const co=coInfo(coOf(p)),company=co.name;
- /* cover */
- doc.setFillColor(...acc);doc.rect(0,0,PW,80,'F');const lw=await pdfCoverLogos(doc,co,p,PW,M);
- font(10,'bold',[255,255,255]);T((d.full?'CONSOLIDATED INSPECTION REPORT':'INSPECTION REPORT – '+(d.role.desig?desigOf(d.role.desig).label:'MY TRADES')).toUpperCase(),M,22);font(22,'bold',[255,255,255]);const tl=doc.splitTextToSize(o.title||p.name,PW-2*M-lw).slice(0,3);T(tl,M,33);
- font(10.5,'normal',[255,255,255]);const sub=[p.client,p.address].filter(Boolean).join('  ·  ');if(sub)T(doc.splitTextToSize(sub,PW-2*M-lw)[0],M,33+tl.length*8.5+1);if(company){font(10,'bold',[255,255,255]);T(doc.splitTextToSize('Inspecting company: '+company,PW-2*M-lw)[0],M,66)}font(9,'normal',[255,255,255]);T('Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),M,72);
- y=94;const rows=[['Project',p.folderName||p.name],['Project code',p.code],['Client',p.client],['Site address',p.address],['Dropbox folder',pfLinked(p)?p.dbx.path:''],['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${insCode(x.id)} · ${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')],
-  ['Project team',(p.team||[]).map(m=>`${m.name||m.email} – ${desigOf(m.designation).label}${m.role==='admin'||eqEmail(m.email,p.ownerEmail)?' (admin)':''}`).join('\n')],['Scope',d.full?'All trades':roleScopeText(p)],['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]];
- for(const[k,v]of rows.filter(r=>r[1])){font(10,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,10);const h=Math.max(7,ls.length*4.6+2.6);ensure(h);font(8.5,'bold',GREY);T(k.toUpperCase(),M,y);font(10,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4.2,PW-M,y+h-4.2);y+=h}
- const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length;y+=4;ensure(30);
- const st=[['Total issues',all.length,DARK],['Open',cnt('Open'),[220,38,38]],['In progress',cnt('In Progress'),[217,119,6]],['Closed',cnt('Closed'),[22,163,74]],['Cross-trade',d.flagged.length,[124,58,237]]];const bw=(PW-2*M-16)/5;
- st.forEach(([l,n,c],k)=>{const x=M+k*(bw+4);doc.setFillColor(246,248,251);doc.setDrawColor(222,228,234);doc.roundedRect(x,y,bw,20,2,2,'FD');font(18,'bold',c);T(String(n),x+bw/2,y+10,{align:'center'});font(7.5,'bold',GREY);T(l.toUpperCase(),x+bw/2,y+16,{align:'center'})});y+=27;
+ /* cover: large company logo, accent title block, key numbers */
+ const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length,dts=d.audits.map(x=>x.date).filter(Boolean).sort(),charts=o.charts!==false;
+ const cl=[[[p.code?'Project '+p.code:'',p.client?'Client: '+p.client:''].filter(Boolean).join('  ·  ')],[`${rcPlural(d.audits.length,'inspection')}${dts.length?'  ·  '+fmtDate(dts[0])+(dts[dts.length-1]!==dts[0]?' – '+fmtDate(dts[dts.length-1]):''):''}${d.full?'':'  ·  '+roleScopeText(p)}`],[company?'Inspecting company: '+company:'',1]].filter(l=>l[0]);
+ y=await pdfCover(doc,{co,p,acc,M,font,T,kicker:d.full?'Consolidated inspection report':'Inspection report – '+(d.role.desig?desigOf(d.role.desig).label:'my trades'),title:o.title||p.name,lines:cl,when:'Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),all});
+ const rows=[['Project',p.folderName||p.name],['Project code',p.code],['Client',p.client],['Site address',p.address],['Dropbox folder',pfLinked(p)?p.dbx.path:''],['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${insCode(x.id)} · ${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')],
+  ['Project team',(p.team||[]).map(m=>`${m.name||m.email} – ${desigOf(m.designation).label}${m.role==='admin'||eqEmail(m.email,p.ownerEmail)?' (admin)':''}`).join('\n')],['Scope',d.full?'All trades':roleScopeText(p)],['Cross-trade flags',d.flagged.length?String(d.flagged.length):''],['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]];
+ for(const[k,v]of rows.filter(r=>r[1])){font(9.5,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,10);const h=Math.max(6.4,ls.length*4.3+2.4);ensure(h);font(8,'bold',GREY);T(k.toUpperCase(),M,y);font(9.5,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4,PW-M,y+h-4);y+=h}
+ if(!all.length){y+=3;ensure(8);font(9,'italic',GREY);T('No issues are recorded for this report.',M,y);y+=6}
+ /* executive summary: charts (vector, drawn natively) */
+ if(charts&&all.length){newPage();heading('Executive summary');const r=pdfExecSummary(doc,{M,acc:o.color||THEMES.Blue,items:all,progress:'always',y,newPage:()=>newPage(),top:()=>y});y=r.y;var contY=y<PH-90;window.__lastCharts=rcCharts(all,{progress:'always'}).map(c=>c.id)}
  /* summary by trade and status */
- newPage();heading('Summary by trade and status');const tr=conTradeRows(all);
+ if(typeof contY!=='undefined'&&contY)y+=6;else newPage();heading('Summary by trade and status');const tr=conTradeRows(all);
  table([['Trade',52],['Total',16],['Open',16],['In progress',22],['Closed',17],['Overdue',19],['Flagged in',20],['Flagged out',20]],[...tr.map(r=>[r.t,r.n,r.open,r.prog,r.closed,r.over,r.fin,r.fout]),['All trades',all.length,cnt('Open'),cnt('In Progress'),cnt('Closed'),all.filter(isOver).length,d.flagged.filter(i=>i.flag.status!=='returned').length,'']],
   (v,c)=>c===2&&v[2]?[220,38,38]:c===5&&v[5]?[190,18,60]:null);y+=4;font(8,'italic',GREY);T('Flagged in = issues handed or linked to this trade by another trade; flagged out = issues this trade flagged to others.',M,y);y+=8;
  const bySub=[];for(const[t,m]of conGroups(all))for(const[s,list]of m)bySub.push([t,s==='—'?'(no subcategory)':subShort(s),list.length,list.filter(i=>i.status!=='Closed').length]);
@@ -2638,7 +2641,9 @@ async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF(
    return pdfIssueLayout(C,f,[{label:'Description',text:it.description},{label:'Cross-trade flag',text:it.flag?flagText(it,p):'',col:[124,58,237]}],photos,[],+o.perRow||4)};
   const av=()=>PH-16-(M+4),keepH=L=>14+(14+L.h<=av()?L.h:L.topH); // trade / subcategory headings stay with their first issue
   for(const[t,m]of conGroups(items)){const LS=new Map();for(const[s,list]of m){const ls=[];for(const it of list)ls.push(await lay(it));LS.set(s,ls)}
-   if(!first)ensure(40);first=false;ensure(13+9+keepH(LS.values().next().value[0]));doc.setFillColor(...acc);doc.rect(M,y,PW-2*M,9,'F');font(12,'bold',[255,255,255]);const n=[...m.values()].reduce((a,l)=>a+l.length,0);T(`${t}  ·  ${n} issue${n===1?'':'s'}`,M+3,y+6.2);y+=13;
+   const tAll=all.filter(i=>(i.category||'Unclassified')===t),sH=charts?18.5:0;if(!first)ensure(40);first=false;ensure(13+sH+9+keepH(LS.values().next().value[0]));doc.setFillColor(...acc);doc.rect(M,y,PW-2*M,9,'F');font(12,'bold',[255,255,255]);const n=[...m.values()].reduce((a,l)=>a+l.length,0);T(`${t}  ·  ${n} issue${n===1?'':'s'}`,M+3,y+6.2);y+=11;
+   if(charts&&tAll.length){y+=pdfTradeStrip(doc,tAll,M,y,PW-2*M)+4}else y+=2; /* trade summary strip: mini donut + status / importance / phase counts (all issues of the trade) */
+   
    for(const[s,list]of m){const ls=LS.get(s);ensure(9+keepH(ls[0]));font(10.5,'bold',acc);T(s==='—'?'(no subcategory)':s,M,y+2);doc.setDrawColor(...light);doc.setLineWidth(.4);doc.line(M,y+4,PW-M,y+4);y+=9;
     for(const[k,it]of list.entries()){const L=ls[k];pdfKeep(L,ensure,av());
      doc.setFillColor(...light);doc.rect(M,y,PW-2*M,9,'F');const sw=chipW(it.status),pw=chipW(it.priority),phl=phaseLabel(it.phase),fw=phl?chipW(phl)+2:0;font(11,'bold',acc);const nt=issueRef(it);T(nt,M+3,y+6.1);const nw=doc.getTextWidth(nt)+2.5;
@@ -2706,9 +2711,10 @@ const coList=()=>S.companies.filter(c=>!c.shared&&!c.deleted).sort((a,b)=>(a.ord
 function coOf(p){if(typeof p==='string')p=byId('projects',p);return(p&&p.companyId&&byId('companies',p.companyId))||byId('companies',CO_DEFAULT)||coList()[0]||null}
 /* Effective details: company values, else the shared address. Without any company record: the old Settings company. */
 function coInfo(c){if(!c)return{name:S.settings.company||'',logo:S.settings.logo||'',website:'',footer:'',lines:String(S.settings.companyDetails||'').split('\n').filter(Boolean)};
- const sh=coShared(),v=k=>String(c[k]||'').trim()||String(sh[k]||'').trim();const o={id:c.id,name:c.name||'',logo:c.logo||(c.id===CO_DEFAULT&&S.settings.logo)||'',website:String(c.website||'').trim(),footer:String(c.footer||'').trim()};CO_ADDR.forEach(([k])=>o[k]=v(k));
+ const sh=coShared(),v=k=>String(c[k]||'').trim()||String(sh[k]||'').trim();const o={id:c.id,color:/^#[0-9a-f]{6}$/i.test(c.color||'')?c.color:'',name:c.name||'',logo:c.logo||(c.id===CO_DEFAULT&&S.settings.logo)||'',website:String(c.website||'').trim(),footer:String(c.footer||'').trim()};CO_ADDR.forEach(([k])=>o[k]=v(k));
  o.lines=[...o.address.split('\n').map(x=>x.trim()).filter(Boolean),o.poBox&&'PO Box '+o.poBox,o.phone&&'T '+o.phone,o.mobile&&'M '+o.mobile,o.email,o.website].filter(Boolean);return o}
 const coLine=co=>co.lines.join(' | ');
+const themeOpts=p=>{const co=coInfo(coOf(p)),cur=co.color||S.settings.reportColor||THEMES.Blue;return(co.color?`<option value="${co.color}" selected>${esc(co.name||'Company')} brand colour</option>`:'')+Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${!co.color&&v===cur?'selected':''}>${k}</option>`).join('')};
 const coName=p=>{const c=coOf(p);return c?c.name:(S.settings.company||'')};
 function coCanEdit(){if(!myEmail())return true;return S.projects.some(p=>!p.stub&&projRole(p).admin)}
 async function coSave(c){c.updatedAt=Math.max(Date.now(),(c.updatedAt||0)+1);const w=currentUser();if(w.name)c.updatedBy=w.name;await DB.put('companies',c);const i=S.companies.findIndex(x=>x.id===c.id);if(i>=0)S.companies[i]=c;else S.companies.push(c);Sync.schedule(1500);return c}
@@ -2728,13 +2734,13 @@ function coSettingsHTML(){const sh=coShared(),ed=coCanEdit(),list=coList();
  <div class="card list co-list" style="margin-top:12px">${list.map(c=>{const co=coInfo(c);return`<div class="row co-row" ${ed?`data-act="co-edit" data-id="${c.id}"`:''}><div class="thumb co-logo">${c.logo?`<img src="${esc(c.logo)}" alt="">`:`<b>${esc(c.name.slice(0,2).toUpperCase())}</b>`}</div><div class="grow"><div class="t">${esc(c.name)}</div><div class="meta"><span>${esc(co.website||'No website')}</span>${CO_ADDR.some(([k])=>String(c[k]||'').trim())?'<span class="badge pr-Medium">Own address</span>':''}${c.logo?'':'<span>No logo yet</span>'}${(n=>`<span>${n} project${n===1?'':'s'}</span>`)(S.projects.filter(p=>!p.stub&&coOf(p)===c).length)}</div></div>${ed?`<button class="btn sm" data-act="co-edit" data-id="${c.id}">${ic('edit')} Edit</button>`:''}</div>`}).join('')||'<div class="empty">No companies</div>'}</div>
  ${ed?`<div class="actions" style="margin-top:10px"><button class="btn sm" data-act="co-new">${ic('plus')} Add company</button></div>`:''}</div>`}
 async function coEdit(c){const isNew=!c;const sh=coShared();
- const f=[{k:'name',label:'Company name',req:true,full:true},{k:'website',label:'Website',ph:'e.g. www.example.com'},{k:'logo',label:'Logo (report cover and page header)',type:'image'},{k:'footer',label:'Report footer text (optional)',type:'textarea',full:true,rows:2,ph:'e.g. Registered in Dubai · Licence no. …'},
+ const f=[{k:'name',label:'Company name',req:true,full:true},{k:'website',label:'Website',ph:'e.g. www.example.com'},{k:'logo',label:'Logo (report cover and page header)',type:'image'},{k:'color',label:'Brand colour for reports (optional, e.g. #0b5cab)',ph:'#0b5cab'},{k:'footer',label:'Report footer text (optional)',type:'textarea',full:true,rows:2,ph:'e.g. Registered in Dubai · Licence no. …'},
   {k:'_n',type:'note',html:`<details class="co-adv" ${c&&CO_ADDR.some(([k])=>String(c[k]||'').trim())?'open':''}><summary>Advanced: own address for this company</summary><p class="help">Leave empty to use the shared company address (${esc(coLine(coInfo({name:''}))||'not set')}).</p><div class="form-grid">${CO_ADDR.map(([k,l,t])=>t==='textarea'?`<label class="full"><span>${l}</span><textarea name="${k}" rows="2" placeholder="${esc(sh[k]||'')}">${esc(c&&c[k]||'')}</textarea></label>`:`<label><span>${l}</span><input name="${k}" value="${esc(c&&c[k]||'')}" placeholder="${esc(sh[k]||'')}"></label>`).join('')}</div></details>`}];
  const r=await modal({title:isNew?'Add company':'Edit company',wide:true,body:`<form class="form-grid" onsubmit="return false">${f.map(x=>fieldHTML(x,c&&c[x.k])).join('')}</form>`,
   buttons:[{label:'Cancel',value:null},...(isNew?[]:[{label:'Delete',value:'del',cls:'danger'}]),{label:'Save',value:'ok',cls:'primary',validate:el=>{const i=el.querySelector('[name=name]');if(!i.value.trim()){i.focus();toast('Company name is required');return false}return true}}],
   onOpen:el=>{const box=el.querySelector('[data-img]'),inp=box.querySelector('input[type=file]'),img=box.querySelector('img'),clr=box.querySelector('[data-clear]');
    inp.onchange=async()=>{const fl=inp.files[0];if(!fl)return;const rr=await resizeImage(await imgDataURL(fl),600,'image/png');box.dataset.val=rr.data;img.src=rr.data;img.hidden=false;clr.hidden=false};clr.onclick=()=>{box.dataset.val='';img.hidden=true;clr.hidden=true}},
-  collect:(el,v)=>{if(v==='del')return{del:true};const o={};['name','website','footer',...CO_ADDR.map(x=>x[0])].forEach(k=>o[k]=el.querySelector(`[name="${k}"]`).value.trim());o.logo=el.querySelector('[data-img]').dataset.val||'';return o}});
+  collect:(el,v)=>{if(v==='del')return{del:true};const o={};['name','website','footer','color',...CO_ADDR.map(x=>x[0])].forEach(k=>o[k]=el.querySelector(`[name="${k}"]`).value.trim());if(o.color&&!/^#[0-9a-f]{6}$/i.test(o.color))o.color='';o.logo=el.querySelector('[data-img]').dataset.val||'';return o}});
  if(!r)return;if(r.del){const n=S.projects.filter(p=>!p.stub&&p.companyId===c.id).length;if(!await confirmBox(`Delete company “${c.name}”?${n?` ${n} project${n>1?'s':''} still use it (their reports keep it until you choose another company).`:''}`))return;c.deleted=true;await coSave(c);toast('Company deleted');return render()}
  if(isNew)c={id:'co_'+uid(),ord:50,createdAt:Date.now()};Object.assign(c,r);delete c.deleted;await coSave(c);toast('Company saved');render()}
 Object.assign(ACT,{'co-edit':el=>{if(coCanEdit())return coEdit(byId('companies',el.dataset.id))},'co-new':()=>{if(coCanEdit())return coEdit(null)}});
@@ -2843,6 +2849,156 @@ async function imgReadable(f){if(!f||!await isHeic(f))return f;
 async function imgDataURL(f){return fileToDataURL(await imgReadable(f))}
 /* small thumbnail bitmap/canvas source for a HEIC file (import grid) */
 async function heicThumb(f,max=240){const b=await heicConvert(f,{max,q:0.8});return impDecode(b)}
+
+/* ===== Report charts (PDF + print view) =====
+ Charts are built ONCE as resolution-independent primitives in millimetres (rect / poly / line / circle / text) and rendered either
+ natively into jsPDF (vector shapes + text, no canvas, no charting library) or as inline SVG for the print view. Every text label is
+ measured with jsPDF's Helvetica metrics and truncated with "…" so it can never leave its chart box.
+ Palette: status open red / in progress amber / closed green; importance critical dark red / high orange / medium blue / low grey;
+ phases a blue-grey scale; neutral bars and the heat-map use the report accent (company brand colour or the chosen theme). */
+const RC_STATUS=[['Open','#dc2626'],['In Progress','#d97706'],['Closed','#16a34a']];
+const RC_IMP=[['Critical','#7f1d1d'],['High','#ea580c'],['Medium','#0284c7'],['Low','#64748b']];
+const RC_PHASE=[['1','Phase 1','#243b53'],['2','Phase 2','#486581'],['3','Phase 3','#829ab1'],['','Not set','#cbd2d9']];
+const RC_FLAG=[['pending','Pending','#d97706'],['accepted','Accepted','#16a34a'],['returned','Returned','#64748b']];
+const RC_DARK='#1e2430',RC_GREY='#6e7887',RC_LINE='#e2e8f0';
+let _rcM=null;
+function rcTW(s,size,bold){if(!_rcM){_rcM=new window.jspdf.jsPDF({unit:'mm',format:'a4'})}_rcM.setFont('helvetica',bold?'bold':'normal');_rcM.setFontSize(size);return _rcM.getTextWidth(String(s))}
+function rcFit(s,maxW,size,bold){s=String(s??'');if(maxW<=0)return'';if(rcTW(s,size,bold)<=maxW)return s;let lo=0,hi=s.length;while(lo<hi){const m=(lo+hi+1)>>1;if(rcTW(s.slice(0,m).trimEnd()+'…',size,bold)<=maxW)lo=m;else hi=m-1}return lo?s.slice(0,lo).trimEnd()+'…':''}
+function rcWrap(s,maxW,size,bold,maxLines){const words=String(s||'').split(/\s+/).filter(Boolean),out=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(rcTW(t,size,bold)<=maxW)cur=t;else{if(cur)out.push(cur);cur=w}}if(cur)out.push(cur);
+ if(out.length>maxLines){const keep=out.slice(0,maxLines);keep[maxLines-1]=rcFit(out.slice(maxLines-1).join(' '),maxW,size,bold);return keep}return out.map(l=>rcFit(l,maxW,size,bold))}
+const rcMix=(hex,t)=>{const c=hex2rgb(hex);return'#'+c.map(v=>Math.round(v+(255-v)*t).toString(16).padStart(2,'0')).join('')};
+const rcPct=(n,t)=>t?Math.round(n/t*100):0;
+const rcClosedAt=i=>i.status!=='Closed'?null:(i.closedAt||i.updatedAt||i.createdAt||null);
+const rcDay=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const rcPlural=(n,w)=>n+' '+w+(n===1?'':'s');
+/* ---- primitive builder ---- */
+function rcB(){const P=[];return{P,
+ rect:(x,y,w,h,fill,o={})=>{if(w>0.01&&h>0.01)P.push({t:'rect',x,y,w,h,fill,...o})},
+ poly:(pts,fill)=>P.push({t:'poly',pts,fill}),
+ line:(x1,y1,x2,y2,stroke,lw=.25,dash)=>P.push({t:'line',x1,y1,x2,y2,stroke,lw,dash}),
+ path:(pts,stroke,lw=.5)=>P.push({t:'path',pts,stroke,lw}),
+ circle:(cx,cy,r,fill)=>P.push({t:'circle',cx,cy,r,fill}),
+ text:(s,x,y,size,o={})=>{if(s!=='')P.push({t:'text',s:String(s),x,y,size,bold:!!o.bold,italic:!!o.italic,color:o.color||RC_DARK,align:o.align||'left'})}}}
+function rcArc(cx,cy,r0,r1,a0,a1){const pts=[],n=Math.max(2,Math.ceil((a1-a0)/(Math.PI/90)));for(let k=0;k<=n;k++){const a=a0+(a1-a0)*k/n;pts.push([cx+r1*Math.cos(a),cy+r1*Math.sin(a)])}for(let k=n;k>=0;k--){const a=a0+(a1-a0)*k/n;pts.push([cx+r0*Math.cos(a),cy+r0*Math.sin(a)])}return pts}
+/* donut: segments [{n,color}] */
+function rcDonut(b,cx,cy,R,r,segs,centre,sub){const tot=segs.reduce((a,s)=>a+s.n,0);if(!tot){b.circle(cx,cy,R,'#eef1f5');b.circle(cx,cy,r,'#ffffff')}
+ else{const full=segs.find(s=>s.n===tot);if(full){b.circle(cx,cy,R,full.color);b.circle(cx,cy,r,'#ffffff')}else{let a=-Math.PI/2;for(const s of segs){if(!s.n)continue;const da=s.n/tot*2*Math.PI;b.poly(rcArc(cx,cy,r,R,a,a+da),s.color);a+=da}}}
+ if(centre!=null){const fs=Math.min(14,r*2.1);b.text(centre,cx,cy+(sub?fs*.12:fs*.17),fs,{bold:true,align:'center'});if(sub)b.text(sub,cx,cy+fs*.12+fs*.3+1.2,Math.max(5,fs*.42),{color:RC_GREY,align:'center'})}}
+function rcLegend(b,x,y,w,entries,size=6.8){let cx=x;for(const[l,c]of entries){const lw=rcTW(l,size)+6.5;if(cx+lw>x+w&&cx>x)break;b.rect(cx,y-2.3,2.6,2.6,c,{r:.5});b.text(l,cx+3.6,y,size,{color:RC_GREY});cx+=lw}return 4.5}
+/* horizontal (stacked) bars: rows [{label,segs:[{n,color}],total}] */
+function rcBars(w,rows,legend){const b=rcB();let y=0;if(legend){y+=rcLegend(b,0,3,w,legend)+.8}
+ const fs=7,rh=5.4,bh=3.5,max=Math.max(1,...rows.map(r=>r.total)),cntW=rcTW(String(max),fs,true)+2.5;
+ const labW=Math.min(w*.46,Math.max(...rows.map(r=>rcTW(r.label,fs)),8)+2);const bx=labW+1.5,bw=Math.max(8,w-bx-cntW);
+ for(const r of rows){b.text(rcFit(r.label,labW-1,fs),0,y+rh*.68,fs,{color:r.muted?RC_GREY:RC_DARK,italic:!!r.muted});b.rect(bx,y+(rh-bh)/2,bw,bh,'#f1f4f8',{r:.6});let x=bx;
+  for(const s of r.segs){if(!s.n)continue;const sw=bw*s.n/max;b.rect(x,y+(rh-bh)/2,sw,bh,s.color);x+=sw}b.text(String(r.total),Math.min(x+1.2,bx+bw+1.2),y+rh*.68,fs,{bold:true});y+=rh}
+ return{h:y+1,P:b.P}}
+const rcStatusSegs=list=>RC_STATUS.map(([s,c])=>({n:list.filter(i=>i.status===s).length,color:c}));
+function rcTop(groups,n,otherLabel){const arr=[...groups.entries()].map(([k,v])=>({k,...v})).sort((a,b)=>b.list.length-a.list.length||a.label.localeCompare(b.label));if(arr.length<=n)return arr;
+ const top=arr.slice(0,n-1),rest=arr.slice(n-1);return[...top,{k:'__other',label:otherLabel(rest.length),list:rest.flatMap(r=>r.list),muted:true}]}
+/* ---- the charts (each: {id,title,insight,wide?,note?,body:w=>{h,P}} or null when there is no data) ---- */
+function rcCharts(all,o={}){const acc=o.acc||'#0b5cab',out=[],T=all.length;if(!T)return out;
+ const cnt=s=>all.filter(i=>i.status===s).length,open=cnt('Open'),prog=cnt('In Progress'),closed=cnt('Closed'),pct=rcPct(closed,T);
+ /* 1 status donut */
+ out.push({id:'status',title:'Status',insight:closed===T?`All ${T} issues are closed`:closed?`${pct}% complete – ${closed} of ${T} issues closed, ${open+prog} still to close`:`No issues closed yet – ${open+prog} open or in progress`,
+  body:w=>{const b=rcB(),R=Math.min(17,w*.22),r=R*.62,cy=R+1;rcDonut(b,R+1,cy,R,r,rcStatusSegs(all),pct+'%','complete');const lx=2*R+7,lw=w-lx;let y=cy-9;
+   for(const[s,c]of RC_STATUS){const n=cnt(s);b.rect(lx,y-2.6,3,3,c,{r:.6});b.text(rcFit(s==='In Progress'?'In progress':s,lw-18,7.5),lx+4.6,y,7.5);b.text(`${n}`,w-7,y,7.5,{bold:true,align:'right'});b.text(`${rcPct(n,T)}%`,w,y,6.5,{color:RC_GREY,align:'right'});y+=6}
+   b.line(lx,y-3.6,w,y-3.6,RC_LINE);b.text('Total',lx+4.6,y+.4,7.5,{bold:true});b.text(String(T),w-7,y+.4,7.5,{bold:true,align:'right'});return{h:2*R+2,P:b.P}}});
+ /* 2 issues by trade (stacked by status) */
+ {const g=new Map();for(const i of all){const t=i.category||'Unclassified';if(!g.has(t))g.set(t,{label:t,list:[]});g.get(t).list.push(i)}
+  const rows=rcTop(g,10,k=>`Other (${k} trades)`);const open1=[...g.values()].map(v=>({t:v.label,n:v.list.filter(i=>i.status!=='Closed').length})).sort((a,b)=>b.n-a.n||a.t.localeCompare(b.t))[0];
+  out.push({id:'trade',title:'Issues by trade',insight:open1&&open1.n?`${open1.t} has the most open items (${open1.n})`:'Every trade\'s issues are closed',
+   body:w=>rcBars(w,rows.map(r=>({label:r.label,muted:r.muted,segs:rcStatusSegs(r.list),total:r.list.length})),RC_STATUS.map(([s,c])=>[s==='In Progress'?'In progress':s,c]))})}
+ /* 3 importance × priority heat-map */
+ {const m=RC_IMP.map(([p])=>RC_PHASE.map(([ph])=>all.filter(i=>i.priority===p&&(i.phase||'')===ph).length));const mx=Math.max(1,...m.flat());let best=null;
+  m.forEach((r,ri)=>r.forEach((n,ci)=>{if(n&&(!best||n>best.n))best={n,ri,ci}}));const crit=all.filter(i=>i.priority==='Critical'&&i.status!=='Closed').length,p1=all.filter(i=>i.phase==='1'&&i.status!=='Closed').length;
+  out.push({id:'heat',title:'Importance × priority',insight:best?`Largest group: ${RC_IMP[best.ri][0]} · ${RC_PHASE[best.ci][1]} (${best.n})`+(crit?` – ${crit} critical still open`:p1?` – ${p1} Phase 1 still open`:''):'No importance / priority set',
+   body:w=>{const b=rcB(),lab=17,tw=11,cw=(w-lab-tw)/4,ch=6.3,hh=5;RC_PHASE.forEach(([,l],ci)=>b.text(rcFit(l,cw-1,6.5,true),lab+ci*cw+cw/2,hh-1.4,6.5,{bold:true,align:'center',color:RC_GREY}));b.text('Total',lab+4*cw+tw/2+.5,hh-1.4,6.5,{bold:true,align:'center',color:RC_GREY});
+    RC_IMP.forEach(([p,c],ri)=>{const y=hh+ri*ch;b.rect(0,y+1.6,2.2,ch-3.2,c,{r:.4});b.text(p,3.4,y+ch*.66,7,{bold:true,color:c});let rt=0;
+     m[ri].forEach((n,ci)=>{rt+=n;const t=n/mx,x=lab+ci*cw;b.rect(x+.35,y+.35,cw-.7,ch-.7,n?rcMix(acc,.86-.74*t):'#f4f6f9',{r:.6});b.text(n?String(n):'·',x+cw/2,y+ch*.66,7.5,{bold:!!n,align:'center',color:n?(t>.5?'#ffffff':RC_DARK):'#b0b8c4'})});
+     b.text(String(rt),lab+4*cw+tw/2+.5,y+ch*.66,7.5,{bold:true,align:'center'})});
+    const y=hh+4*ch;b.line(lab,y+.6,w,y+.6,RC_LINE);RC_PHASE.forEach(([ph],ci)=>b.text(String(m.reduce((a,r)=>a+r[ci],0)),lab+ci*cw+cw/2,y+4.4,7,{bold:true,align:'center',color:RC_GREY}));b.text(String(T),lab+4*cw+tw/2+.5,y+4.4,7,{bold:true,align:'center'});return{h:y+5.5,P:b.P}}})}
+ /* 4 top defect types */
+ {const g=new Map();for(const i of all){if(!i.defectType)continue;const k=(i.category||'Unclassified')+' › '+i.defectType;if(!g.has(k))g.set(k,{label:k,list:[]});g.get(k).list.push(i)}
+  if(g.size){const rows=[...g.values()].sort((a,b)=>b.list.length-a.list.length||a.label.localeCompare(b.label)).slice(0,10);
+   out.push({id:'defect',title:'Top defect types',insight:`Most common: ${rows[0].label} (${rows[0].list.length})`+(g.size>10?` – top 10 of ${g.size} types shown`:''),body:w=>rcBars(w,rows.map(r=>({label:r.label,segs:[{n:r.list.length,color:acc}],total:r.list.length})))})}}
+ /* 5 issues by location (case/whitespace normalised; drawing name when the location is empty) */
+ {const g=new Map();let usedDr=0;for(const i of all){let l=String(i.location||'').trim().replace(/\s+/g,' ');if(!l){const dr=i.pin&&byId('drawings',i.pin.drawingId);if(dr&&dr.name){l=String(dr.name).trim().replace(/\s+/g,' ');usedDr++}}if(!l)l='Not specified';
+   const k=l.toLowerCase();if(!g.has(k))g.set(k,{label:l,list:[],forms:{}});const e=g.get(k);e.list.push(i);e.forms[l]=(e.forms[l]||0)+1}
+  for(const e of g.values())e.label=Object.entries(e.forms).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0][0];
+  const known=[...g.values()].filter(e=>e.label!=='Not specified');if(known.length){const rows=rcTop(g,10,k=>'Other');const top=known.sort((a,b)=>b.list.length-a.list.length||a.label.localeCompare(b.label))[0];
+   out.push({id:'location',title:'Issues by location',insight:`${top.label} has the most issues (${top.list.length})`+(g.size>10?` – ${g.size} locations`:''),note:usedDr?`Issues without a location are grouped by the drawing they are pinned on (${usedDr}).`:'',
+    body:w=>rcBars(w,rows.map(r=>({label:r.label,muted:r.muted||r.label==='Not specified',segs:rcStatusSegs(r.list),total:r.list.length})),RC_STATUS.map(([s,c])=>[s==='In Progress'?'In progress':s,c]))})}}
+ /* 6 cross-trade flags (from → to, by flag status) */
+ {const fl=all.filter(i=>i.flag&&i.flag.toTrade);if(fl.length){const g=new Map();for(const i of fl){const f=i.flag,k=(f.fromTrade||'–')+' » '+f.toTrade;if(!g.has(k))g.set(k,{label:k,list:[]});g.get(k).list.push(i)}
+   const rows=rcTop(g,8,k=>`Other (${k})`),pend=fl.filter(i=>i.flag.status==='pending').length,top=[...g.values()].sort((a,b)=>b.list.length-a.list.length||a.label.localeCompare(b.label))[0];
+   out.push({id:'flags',title:'Cross-trade flags',insight:`${rcPlural(fl.length,'flag')}, ${pend} pending – most: ${top.label} (${top.list.length})`,
+    body:w=>rcBars(w,rows.map(r=>({label:r.label,muted:r.muted,segs:RC_FLAG.map(([s,,c])=>({n:r.list.filter(i=>(i.flag.status||'pending')===s).length,color:c})),total:r.list.length})),RC_FLAG.map(([,l,c])=>[l,c]))})}}
+ /* 7 progress over time (cumulative raised vs closed per day) */
+ {const ev=[];let est=0;for(const i of all){if(i.createdAt)ev.push([rcDay(i.createdAt),1,0]);const c=rcClosedAt(i);if(c){ev.push([rcDay(c),0,1]);if(!i.closedAt)est++}}
+  const days=[...new Set(ev.map(e=>e[0]))].sort();if(days.length&&(o.progress==='always'||(o.progress&&days.length>1))){
+   const first=days[0],last=days[days.length-1],D=[];for(let t=Date.parse(first+'T12:00:00');rcDay(t)<=last;t+=864e5)D.push(rcDay(t));
+   const add=new Map(),cl=new Map();ev.forEach(([d,a,c])=>{add.set(d,(add.get(d)||0)+a);cl.set(d,(cl.get(d)||0)+c)});let ra=0,rc=0;const S=D.map(d=>{ra+=add.get(d)||0;rc+=cl.get(d)||0;return[ra,rc]});
+   const fd=s=>fmtDate(s+'T12:00:00');
+   out.push({id:'progress',wide:true,title:'Progress over time',insight:`${ra} raised and ${rc} closed between ${fd(first)} and ${fd(last)} – ${ra-rc} still open`,
+    note:est?`Closed dates for ${rcPlural(est,'older issue')} are estimated from their last edit (the app records the exact closing date from now on).`:'',
+    body:w=>{const b=rcB(),h=42,lx=9,top=6,bot=h-6,pw=w-lx-2,mx=Math.max(1,ra),step=Math.max(1,Math.ceil(mx/4)),ymax=step*Math.ceil(mx/step),X=k=>lx+(D.length<2?pw/2:pw*k/(D.length-1)),Y=v=>bot-(bot-top)*v/ymax;
+     rcLegend(b,lx,3,pw,[['Raised (cumulative)',acc],['Closed (cumulative)','#16a34a']]);
+     for(let v=0;v<=ymax;v+=step){b.line(lx,Y(v),lx+pw,Y(v),v?'#edf0f4':'#c5ccd6',.2);b.text(String(v),lx-1.2,Y(v)+1,6,{color:RC_GREY,align:'right'})}
+     const lab=[0,Math.round((D.length-1)/2),D.length-1].filter((v,k,a)=>a.indexOf(v)===k);lab.forEach((k,j)=>b.text(fd(D[k]),X(k),h-1.5,6,{color:RC_GREY,align:lab.length===1?'center':j===0?'left':j===lab.length-1?'right':'center'}));
+     if(D.length===1){b.circle(X(0),Y(S[0][0]),.9,acc);b.circle(X(0),Y(S[0][1]),.9,'#16a34a')}else{b.path(S.map((s,k)=>[X(k),Y(s[0])]),acc,.6);b.path(S.map((s,k)=>[X(k),Y(s[1])]),'#16a34a',.6)}
+     return{h,P:b.P}}})}}
+ return out}
+/* mini summary strip for a trade section: small status donut + counts by status, importance and phase */
+function rcStrip(list,w){const b=rcB(),T=list.length,c=s=>list.filter(i=>i.status===s).length;rcDonut(b,7,7,6.6,4.1,rcStatusSegs(list),rcPct(c('Closed'),T)+'%');
+ const x0=17,cw=(w-x0)/3,rows=[['Status',RC_STATUS.map(([s,col])=>[s==='In Progress'?'In progress':s,c(s),col])],['Importance',RC_IMP.map(([p,col])=>[p,list.filter(i=>i.priority===p).length,col])],['Priority',RC_PHASE.map(([ph,l,col])=>[l,list.filter(i=>(i.phase||'')===ph).length,col])]];
+ rows.forEach(([h,ent],k)=>{const x=x0+k*cw;b.text(h.toUpperCase(),x,3.2,5.8,{bold:true,color:RC_GREY});ent.forEach(([l,n,col],j)=>{const yy=7.2+Math.floor(j/2)*4.2,xx=x+(j%2)*(cw/2);b.rect(xx,yy-2.1,2.2,2.2,col,{r:.4});b.text(rcFit(l,cw/2-9,6.5),xx+3,yy,6.5);b.text(String(n),xx+cw/2-2.5,yy,6.5,{bold:true,align:'right'})})});
+ return{h:14.5,P:b.P}}
+/* ---- renderers ---- */
+function rcPdf(doc,P,ox,oy){for(const p of P){
+ if(p.t==='rect'){doc.setFillColor(...hex2rgb(p.fill));if(p.r)doc.roundedRect(ox+p.x,oy+p.y,p.w,p.h,Math.min(p.r,p.w/2,p.h/2),Math.min(p.r,p.w/2,p.h/2),'F');else doc.rect(ox+p.x,oy+p.y,p.w,p.h,'F')}
+ else if(p.t==='circle'){doc.setFillColor(...hex2rgb(p.fill));doc.circle(ox+p.cx,oy+p.cy,p.r,'F')}
+ else if(p.t==='poly'){doc.setFillColor(...hex2rgb(p.fill));const d=[];for(let k=1;k<p.pts.length;k++)d.push([p.pts[k][0]-p.pts[k-1][0],p.pts[k][1]-p.pts[k-1][1]]);doc.lines(d,ox+p.pts[0][0],oy+p.pts[0][1],[1,1],'F',true)}
+ else if(p.t==='line'){doc.setDrawColor(...hex2rgb(p.stroke));doc.setLineWidth(p.lw);if(p.dash)doc.setLineDashPattern([1,1],0);doc.line(ox+p.x1,oy+p.y1,ox+p.x2,oy+p.y2);if(p.dash)doc.setLineDashPattern([],0)}
+ else if(p.t==='path'){doc.setDrawColor(...hex2rgb(p.stroke));doc.setLineWidth(p.lw);const d=[];for(let k=1;k<p.pts.length;k++)d.push([p.pts[k][0]-p.pts[k-1][0],p.pts[k][1]-p.pts[k-1][1]]);doc.lines(d,ox+p.pts[0][0],oy+p.pts[0][1],[1,1],'S',false)}
+ else if(p.t==='text'){doc.setFont('helvetica',p.bold?'bold':p.italic?'italic':'normal');doc.setFontSize(p.size);doc.setTextColor(...hex2rgb(p.color));doc.text(p.s,ox+p.x,oy+p.y,{align:p.align})}}}
+function rcSvg(P,w,h){const f=v=>+v.toFixed(2),pt=.3528;let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(w)} ${f(h)}" width="100%" style="display:block;overflow:hidden" font-family="Helvetica,Arial,sans-serif">`;
+ for(const p of P){if(p.t==='rect')s+=`<rect x="${f(p.x)}" y="${f(p.y)}" width="${f(p.w)}" height="${f(p.h)}"${p.r?` rx="${f(Math.min(p.r,p.w/2,p.h/2))}"`:''} fill="${p.fill}"/>`;
+  else if(p.t==='circle')s+=`<circle cx="${f(p.cx)}" cy="${f(p.cy)}" r="${f(p.r)}" fill="${p.fill}"/>`;
+  else if(p.t==='poly')s+=`<polygon points="${p.pts.map(q=>f(q[0])+','+f(q[1])).join(' ')}" fill="${p.fill}"/>`;
+  else if(p.t==='line')s+=`<line x1="${f(p.x1)}" y1="${f(p.y1)}" x2="${f(p.x2)}" y2="${f(p.y2)}" stroke="${p.stroke}" stroke-width="${p.lw}"${p.dash?' stroke-dasharray="1 1"':''}/>`;
+  else if(p.t==='path')s+=`<polyline points="${p.pts.map(q=>f(q[0])+','+f(q[1])).join(' ')}" fill="none" stroke="${p.stroke}" stroke-width="${p.lw}" stroke-linejoin="round"/>`;
+  else if(p.t==='text')s+=`<text x="${f(p.x)}" y="${f(p.y)}" font-size="${f(p.size*pt)}"${p.bold?' font-weight="bold"':''}${p.italic?' font-style="italic"':''} fill="${p.color}" text-anchor="${{left:'start',center:'middle',right:'end'}[p.align]}">${esc(p.s)}</text>`}
+ return s+'</svg>'}
+/* card geometry shared by PDF and print view */
+function rcCard(c,w){const pad=3.2,iw=w-2*pad,ins=rcWrap(c.insight,iw,7.3,false,2),note=c.note?rcWrap(c.note,iw,6.2,false,2):[];const body=c.body(iw);const head=8+ins.length*3.3+1.6;return{c,w,pad,iw,ins,note,body,head,h:head+body.h+(note.length?note.length*2.9+1.2:0)+pad}}
+/* Executive summary in jsPDF: 2 charts per row (wide charts full width), equal-height cards, never split across pages. */
+function pdfExecSummary(doc,ctx){const{M,acc}=ctx;let{y}=ctx;const PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight(),gap=6,full=PW-2*M,half=(full-gap)/2;
+ const charts=rcCharts(ctx.items,{acc,progress:ctx.progress});if(!charts.length)return{y,n:0};
+ const rows=[];let pend=null;for(const c of charts){if(c.wide){if(pend){rows.push([pend]);pend=null}rows.push([c]);continue}if(pend){rows.push([pend,c]);pend=null}else pend=c}if(pend)rows.push([pend]);
+ const drawCard=(K,x,yy,h)=>{doc.setFillColor(255,255,255);doc.setDrawColor(222,228,234);doc.setLineWidth(.3);doc.roundedRect(x,yy,K.w,h,2,2,'FD');doc.setFillColor(...hex2rgb(acc));doc.rect(x,yy+2,1.1,6,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(30,36,48);doc.text(rcFit(K.c.title,K.iw,9.5,true),x+K.pad,yy+6.3);doc.setFont('helvetica','normal');doc.setFontSize(7.3);doc.setTextColor(90,100,115);K.ins.forEach((l,k)=>doc.text(l,x+K.pad,yy+10.4+k*3.3));
+  rcPdf(doc,K.body.P,x+K.pad,yy+K.head);if(K.note.length){doc.setFont('helvetica','italic');doc.setFontSize(6.2);doc.setTextColor(120,128,140);K.note.forEach((l,k)=>doc.text(l,x+K.pad,yy+K.head+K.body.h+3+k*2.9))}};
+ let n=0;const boxes=window.__lastChartBoxes=[];for(const r of rows){const Ks=r.map(c=>rcCard(c,r.length===1&&c.wide?full:half)),h=Math.max(...Ks.map(K=>K.h));if(y+h>PH-16){ctx.newPage();y=ctx.top()}
+  Ks.forEach((K,k)=>{drawCard(K,M+k*(half+gap),y,h);boxes.push({id:K.c.id,title:K.c.title,insight:K.c.insight,page:doc.internal.getCurrentPageInfo().pageNumber,x:M+k*(half+gap),y,w:K.w,h})});y+=h+5;n+=Ks.length}
+ return{y,n}}
+function pdfTradeStrip(doc,list,x,y,w){const s=rcStrip(list,w-6);(window.__lastStrips=window.__lastStrips||[]).push({trade:list[0]&&(list[0].category||'Unclassified'),page:doc.internal.getCurrentPageInfo().pageNumber,x,y,w,h:s.h+3});doc.setFillColor(248,250,252);doc.setDrawColor(226,232,240);doc.setLineWidth(.25);doc.roundedRect(x,y,w,s.h+3,1.6,1.6,'FD');rcPdf(doc,s.P,x+3,y+1.5);return s.h+3}
+/* print view: same charts as inline SVG in a 2-column grid */
+function svgExecSummary(items,o){const charts=rcCharts(items,o);if(!charts.length)return'';const full=182,half=88;
+ return`<div class="charts">${charts.map(c=>{const K=rcCard(c,c.wide?full:half);return`<div class="chart${c.wide?' wide':''}"><b>${esc(c.title)}</b><p class="ins">${esc(c.insight)}</p>${rcSvg(K.body.P,K.iw,K.body.h)}${c.note?`<p class="cnote">${esc(c.note)}</p>`:''}</div>`}).join('')}</div>`}
+const RC_CSS='.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.chart{border:1px solid #dee4ea;border-left:3px solid var(--acc);border-radius:6px;padding:8px 10px;break-inside:avoid;page-break-inside:avoid}.chart.wide{grid-column:1/-1}.chart b{font-size:10pt}.chart .ins{margin:2px 0 6px;font-size:8pt;color:#5a6473}.chart .cnote{margin:4px 0 0;font-size:7pt;color:#78808c;font-style:italic}';
+/* report span: more than one calendar day of activity (inspection dates, issue created / closed days) */
+function rcSpansDays(items,audits){const s=new Set((audits||[]).map(a=>a.date).filter(Boolean));for(const i of items){if(i.createdAt)s.add(rcDay(i.createdAt));const c=rcClosedAt(i);if(c)s.add(rcDay(c))}return s.size>1}
+/* key numbers for the cover */
+function rcKeyNums(all){const c=s=>all.filter(i=>i.status===s).length,T=all.length;return[['Total',T,'#1e2430'],['Open',c('Open'),'#dc2626'],['In progress',c('In Progress'),'#d97706'],['Closed',c('Closed'),'#16a34a'],['Complete',rcPct(c('Closed'),T)+'%',null],['Overdue',all.filter(isOver).length,'#9f1239']]}
+/* Cover page (both PDF reports): large company logo, accent title block, key-numbers strip. Returns y below the strip. */
+async function pdfCover(doc,{co,p,acc,M,font,T,kicker,title,lines,when,all}){const PW=doc.internal.pageSize.getWidth();const W=[255,255,255];
+ let lw=0;if(co.logo){try{lw=await pdfLogo(doc,co.logo,M,10,78,30,'co-logo',true)}catch(e){lw=0}}if(!lw&&co.name){font(18,'bold',acc);T(rcFit(co.name,PW-2*M-50,18,true),M,28)}
+ const cl=p.logo&&p.logo!==co.logo?p.logo:'';if(cl){try{await pdfLogo(doc,cl,PW-M-46,12,46,24,'client-logo')}catch(e){}}
+ const tl=doc.splitTextToSize(title,PW-2*M-12).slice(0,3);font(24,'bold');const bandH=24+tl.length*9.6+lines.length*5.6+16;const y0=48;doc.setFillColor(...acc);doc.rect(0,y0,PW,bandH,'F');doc.setFillColor(...mix(acc,.25));doc.rect(0,y0+bandH-1.6,PW,1.6,'F');
+ let y=y0+12;font(9.5,'bold',W);doc.setCharSpace(.6);T(String(kicker).toUpperCase(),M,y);doc.setCharSpace(0);y+=11;font(24,'bold',W);T(tl,M,y);y+=tl.length*9.6;
+ for(const[l,b]of lines){font(b?10:11,b?'bold':'normal',W);T(rcFit(l,PW-2*M,b?10:11,!!b),M,y);y+=5.6}font(8.5,'normal',mix(acc,.6));T(rcFit(when,PW-2*M,8.5),M,y0+bandH-5);
+ y=y0+bandH+7;const K=rcKeyNums(all),gap=3,bw=(PW-2*M-gap*5)/6;K.forEach(([l,n,c],k)=>{const x=M+k*(bw+gap);doc.setFillColor(...(c?[246,248,251]:acc));doc.setDrawColor(...(c?[222,228,234]:acc));doc.setLineWidth(.3);doc.roundedRect(x,y,bw,21,2,2,'FD');
+  font(17,'bold',c?hex2rgb(c):W);T(String(n),x+bw/2,y+11,{align:'center'});font(6.8,'bold',c?[110,120,135]:mix(acc,.75));T(l.toUpperCase(),x+bw/2,y+17,{align:'center'})});return y+28}
 
 </script>
 </body>
