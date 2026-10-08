@@ -901,7 +901,7 @@ async function remove(store,id){const rec=S[store].find(x=>x.id===id);const b=re
 async function saveSettings(){S.settings.id='main';S.settings.updatedAt=Date.now();await DB.put('settings',S.settings);Sync.markDirty('settings')}
 async function getPhoto(id){if(!id)return null;if(photoCache.has(id))return photoCache.get(id);let p=await DB.get('photos',id);if(!p&&Dbx.connected()&&!TOMBS.has('photos:'+id))p=await Sync.lazyPhoto(id);if(p)photoCache.set(id,p);return p}
 async function putPhoto(p){p.updatedAt=Date.now();await DB.put('photos',p);photoCache.set(p.id,p);Sync.schedule();return p}
-async function delPhoto(id,pid){if(!id)return;const p=await DB.get('photos',id);await DB.del('photos',id);photoCache.delete(id);if(pid){await addTomb('photos:'+id,'projects/'+pid);Sync.queueRemoteDelete(id,p&&p.kind==='drawing',pid)}}
+async function delPhoto(id,pid,it){if(!id)return;const p=await DB.get('photos',id);await DB.del('photos',id);photoCache.delete(id);if(pid){await addTomb('photos:'+id,'projects/'+pid);Sync.queueRemoteDelete(id,p&&p.kind==='drawing',pid,it&&it.auditId?insCode(it.auditId):'')}} // Dropbox file is moved to Photos/_Deleted issues/, never deleted
 const cats=()=>S.settings.categories&&S.settings.categories.length?S.settings.categories:DEFAULT_CATS;
 const byId=(store,id)=>S[store].find(x=>x.id===id);
 const projItems=pid=>S.items.filter(i=>i.projectId===pid);
@@ -1168,7 +1168,7 @@ const defaultInspector=()=>localStorage.getItem('sap.inspector')||currentUser().
 const auditFields=()=>[{k:'title',label:'Inspection title',req:true,full:true,ph:'e.g. Pre-handover inspection'},{k:'date',label:'Date',type:'date'},{k:'inspector',label:'Inspector'},{k:'weather',label:'Weather',type:'select',options:WEATHER},{k:'attendees',label:'Attendees / present'},{k:'notes',label:'Notes / general observations',type:'textarea',full:true},{k:'signature',label:'Inspector signature',type:'signature'}];
 function nextNumber(aid){return auditItems(aid).reduce((m,i)=>Math.max(m,i.number||0),0)+1} // per inspection
 async function newItem(auditId,extra={}){const a=byId('audits',auditId);const R=projRole(a.projectId);if(teamOn(byId('projects',a.projectId))&&R.desig&&!extra.raisedDesig)extra={raisedDesig:R.desig,...extra};const it={id:uid(),auditId,projectId:a.projectId,number:nextNumber(auditId),title:'',description:'',location:'',category:'',subcategory:'',defectType:'',priority:'Medium',phase:'',status:'Open',assignee:'',dueDate:'',photos:[],pin:null,...extra};await save('items',it);return it}
-async function deleteItem(it,renum=true){for(const ph of it.photos||[])await delPhoto(ph,it.projectId);await remove('items',it.id);return renum?fixNumbers(it.projectId):0}
+async function deleteItem(it,renum=true){for(const ph of it.photos||[])await delPhoto(ph,it.projectId,it);await remove('items',it.id);return renum?fixNumbers(it.projectId):0}
 async function deleteAudit(a){for(const it of auditItems(a.id))await deleteItem(it,false);for(const c of S.checklists.filter(c=>c.auditId===a.id))await remove('checklists',c.id);await remove('audits',a.id);await fixNumbers(a.projectId)}
 async function deleteDrawing(d){for(const it of S.items.filter(i=>i.pin&&i.pin.drawingId===d.id)){it.pin=null;await save('items',it)}await delPhoto(d.imageId,d.projectId);await remove('drawings',d.id)}
 async function deleteProject(p){for(const a of S.audits.filter(a=>a.projectId===p.id))await deleteAudit(a);for(const d of S.drawings.filter(d=>d.projectId===p.id))await deleteDrawing(d);await remove('projects',p.id)}
@@ -1213,7 +1213,7 @@ const ACT={
  'new-item':async el=>{const fr=el.dataset.from&&byId('items',el.dataset.from);const it=await newItem(el.dataset.id,fr&&fr.phase?{phase:fr.phase}:{});location.hash='#/item/'+it.id;setTimeout(()=>{const t=$('[name=title]');t&&t.focus()},60)},
  'dup-item':async el=>{const s=byId('items',el.dataset.id);const it=await newItem(s.auditId,{title:s.title+' (copy)',description:s.description,location:s.location,category:s.category,subcategory:s.subcategory||'',defectType:s.defectType||'',priority:s.priority,phase:s.phase||'',assignee:s.assignee,dueDate:s.dueDate});location.hash='#/item/'+it.id},
  'del-item':async el=>{const it=byId('items',el.dataset.id);if(!canDeleteItem(it))return;if(!await confirmBox(`Delete issue #${it.number}?`))return;const n=await deleteItem(it);toast(n?'Issue deleted – later issues renumbered':'Issue deleted',2200);location.hash='#/audit/'+it.auditId},
- 'del-photo':async el=>{if(!await confirmBox('Delete this photo?'))return;const it=byId('items',el.dataset.id);it.photos=it.photos.filter(p=>p!==el.dataset.ph);await delPhoto(el.dataset.ph,it.projectId);await save('items',it);render()},
+ 'del-photo':async el=>{if(!await confirmBox('Delete this photo?'))return;const it=byId('items',el.dataset.id);it.photos=it.photos.filter(p=>p!==el.dataset.ph);await delPhoto(el.dataset.ph,it.projectId,it);await save('items',it);render()},
  'photo-first':async el=>{const it=byId('items',el.dataset.id);it.photos=[el.dataset.ph,...it.photos.filter(p=>p!==el.dataset.ph)];UI.ivSel={id:it.id,k:0};await save('items',it);render()},
  annotate:async el=>{if(await annotate(el.dataset.ph)){const it=byId('items',el.dataset.id);await save('items',it);render()}},
  lightbox:el=>lightbox(el.src),
@@ -1589,7 +1589,7 @@ const Dbx={loc:null,
   if(/no_write_permission|insufficient_permissions/.test(s))return new DbxErr(READONLY_MSG,'noaccess',r.status);
   if(/access_denied|no_permission|invalid_root|missing_scope/.test(s))return new DbxErr(/missing_scope/.test(s)?'The Dropbox app is missing a permission ('+s+'). Contact your administrator.':NOACCESS_MSG,/missing_scope/.test(s)?'api':'noaccess',r.status);
   return new DbxErr(s,/not_found/.test(s)?'notfound':/conflict/.test(s)?'conflict':r.status===401?'auth':r.status===507||/insufficient_space/.test(s)?'space':'api',r.status)},
- async rpc(path,arg=null,opt){if(/^files\/(delete|move|permanently_delete|copy_batch)/.test(path))dbxGuard(path,arg);const h={...(arg!==null?{'Content-Type':'application/json'}:{}),...(path.startsWith('files/')?this.rootHeader(opt):{})};const r=await this.call(DBX_API+path,{headers:h,body:arg!==null?JSON.stringify(arg):undefined});if(!r.ok)throw await this.err(r);return r.json()},
+ async rpc(path,arg=null,opt){if(/^files\/(delete|move|permanently_delete|copy|remove|purge)|^files\/.*(delete|batch)/.test(path))dbxGuard(path,arg);const h={...(arg!==null?{'Content-Type':'application/json'}:{}),...(path.startsWith('files/')?this.rootHeader(opt):{})};const r=await this.call(DBX_API+path,{headers:h,body:arg!==null?JSON.stringify(arg):undefined});if(!r.ok)throw await this.err(r);return r.json()},
  async upload(path,blob,mode={'.tag':'overwrite'},opt){const r=await this.call(DBX_CONTENT+'files/upload',{headers:{'Content-Type':'application/octet-stream','Dropbox-API-Arg':hjson({path,mode,autorename:false,mute:true}),...this.rootHeader(opt)},body:blob});if(!r.ok)throw await this.err(r);return r.json()},
  async download(path,opt){const r=await this.call(DBX_CONTENT+'files/download',{headers:{'Dropbox-API-Arg':hjson({path}),...this.rootHeader(opt)}});if(!r.ok)throw await this.err(r);let meta=null;try{meta=JSON.parse(r.headers.get('Dropbox-API-Result')||'null')}catch(e){}return{blob:await r.blob(),meta}},
  async listAll(path,recursive=false,opt){let r;try{r=await this.rpc('files/list_folder',{path,recursive,include_deleted:false},opt)}catch(e){if(e.kind==='notfound')return{entries:[],cursor:null};throw e}let es=r.entries;while(r.has_more){r=await this.rpc('files/list_folder/continue',{cursor:r.cursor},opt);es=es.concat(r.entries)}return{entries:es,cursor:r.cursor}}
@@ -1605,30 +1605,44 @@ const Dbx={loc:null,
  A missing remote file NEVER deletes local data; only tombstones do. Uploads use Dropbox rev (update mode), so
  concurrent writers get a conflict → re-download, merge, retry. */
 const SYNC_STORES=['projects','audits','items','drawings','checklists','templates','settings'];
-/* Hard rule: the app never deletes or moves a folder, a project root, a parent folder (RPE_PMC…) or any user file. The only files it may
- delete / move are its own: photo/drawing files (<…>/Photos|Drawings/…[id].jpg, global /photos|/drawings/<id>.jpg), their edit sidecars
- (_siteinspection/edits/<id>.orig.jpg|.json) and legacy registry entries (_registry/projects/<CODE>.json). Anything else throws. */
-const DBX_GUARD_LOG=[];
-function dbxGuardOk(p){p=String(p||'');const segs=p.split('/').filter(Boolean),name=segs[segs.length-1]||'',dir=(segs[segs.length-2]||'').toLowerCase(),up=(segs[segs.length-3]||'').toLowerCase();
- if(!name||!/\.(jpe?g|json)$/i.test(name)||pfMatch(name)||pfParentOf(name))return false;
- if(/^(photos|drawings)$/.test(dir))return true;
- if(dir==='edits'&&up==='_siteinspection')return true;if(up==='photos'&&/ \[[A-Za-z0-9]+\]\.jpe?g$/.test(name))return true; /* the app's own photo in Photos/<inspection>/ */if(dir==='projects'&&up==='_registry')return /\.json$/i.test(name);return false}
-/* cross-folder move allowed ONLY for the app's own photo file "… [id].jpg" between Photos/ and Photos/<inspection>/ (or between two
- inspection subfolders) of the SAME project data folder, keeping the same [id]; never a folder */
-function dbxPhotoRoot(p){const s=String(p||'').split('/'),n=s.length;if(!/ \[[A-Za-z0-9]+\]\.jpe?g$/.test(s[n-1]||''))return null;if((s[n-2]||'').toLowerCase()==='photos')return s.slice(0,n-1).join('/').toLowerCase();
+/* Hard rule: the app NEVER deletes anything in Dropbox (files/delete*, permanently_delete, batches: refused outright) and never moves a
+ folder, a project root, a parent folder (RPE_PMC…) or a user file. The only moves allowed are of the app's own files:
+  - same-folder rename of an "… [id].jpg" photo/drawing file in Photos/, Photos/<inspection>/ or Drawings/ (same [id])
+  - "… [id].jpg" photo between Photos/ and Photos/<inspection>/ (or two inspection subfolders) of the SAME data folder, incl. INTO
+    Photos/_Deleted issues/ (never out of it)
+  - global legacy /photos/<id>.jpg|.orig.jpg|.json → /photos/_Deleted issues/<YYYY-MM-DD> <same name>
+  - edit sidecar _siteinspection/edits/<id>.orig.jpg|.json → _siteinspection/edits/_deleted/<same name>
+ Anything else throws. */
+const DBX_GUARD_LOG=[],DEL_DIR='_Deleted issues';
+const ID_JPG=/ \[([A-Za-z0-9]+)\]\.jpe?g$/,GL_FILE=/^[A-Za-z0-9_-]+(\.orig)?\.(jpe?g|json)$/i;
+const dbxSegs=p=>String(p||'').split('/'),dbxDir=p=>dbxSegs(p).slice(0,-1).join('/').toLowerCase(),dbxBase=p=>dbxSegs(p).pop()||'';
+const isDelDir=n=>String(n||'').toLowerCase()===DEL_DIR.toLowerCase();
+function dbxGuardOk(p){const name=dbxBase(p);return!!name&&/\.(jpe?g|json)$/i.test(name)&&!pfMatch(name)&&!pfParentOf(name)} // file-like target, never a project/parent folder name
+function dbxPhotoRoot(p){const s=dbxSegs(p),n=s.length;if(!ID_JPG.test(s[n-1]||''))return null;if((s[n-2]||'').toLowerCase()==='photos')return s.slice(0,n-1).join('/').toLowerCase();
  if((s[n-3]||'').toLowerCase()==='photos'&&s[n-2]&&!pfMatch(s[n-2])&&!pfParentOf(s[n-2]))return s.slice(0,n-2).join('/').toLowerCase();return null}
-function dbxPhotoMoveOk(f,t){const a=dbxPhotoRoot(f),b=dbxPhotoRoot(t),id=x=>(/\[([A-Za-z0-9]+)\]\.jpe?g$/.exec(x)||[])[1];return!!a&&a===b&&!!id(f)&&id(f)===id(t)}
+const idOfName=x=>(ID_JPG.exec(x)||[])[1];
+function dbxPhotoMoveOk(f,t){const a=dbxPhotoRoot(f),b=dbxPhotoRoot(t);if(!a||a!==b||!idOfName(f)||idOfName(f)!==idOfName(t))return false;return!isDelDir(dbxSegs(f).slice(-2)[0])} // never out of _Deleted issues
+function dbxMoveOk(f,t){if(!dbxGuardOk(f)||!dbxGuardOk(t))return false;const df=dbxDir(f),dt=dbxDir(t),sf=dbxSegs(f),st=dbxSegs(t),pf=(sf[sf.length-2]||'').toLowerCase(),ppf=(sf[sf.length-3]||'').toLowerCase();
+ if(df===dt){if(!idOfName(f)||idOfName(f)!==idOfName(t)||isDelDir(pf))return false;return pf==='photos'||pf==='drawings'||ppf==='photos'} // rename in place
+ if(dbxPhotoMoveOk(f,t))return true;
+ if(pf==='photos'&&GL_FILE.test(dbxBase(f))&&dt===df+'/'+DEL_DIR.toLowerCase()&&new RegExp('^\\d{4}-\\d{2}-\\d{2} '+dbxBase(f).replace(/[.]/g,'\\.')+'$','i').test(dbxBase(t)))return true; // global legacy photo → _Deleted issues
+ if(pf==='edits'&&ppf==='_siteinspection'&&GL_FILE.test(dbxBase(f))&&dt===df+'/_deleted'&&dbxBase(t).toLowerCase()===dbxBase(f).toLowerCase())return true; // edit sidecar → edits/_deleted
+ return false}
 function dbxGuard(ep,arg){const a=arg||{};const ps=[a.path,a.from_path,a.to_path,...(a.entries||[]).flatMap(e=>[e.path,e.from_path,e.to_path])].filter(x=>x!=null);
- const bad=!ps.length?['(none)']:ps.filter(p=>!dbxGuardOk(p));if(/^files\/move/.test(ep)&&a.from_path&&a.to_path){const d=x=>String(x).split('/').slice(0,-1).join('/').toLowerCase();if(d(a.from_path)!==d(a.to_path)&&!dbxPhotoMoveOk(a.from_path,a.to_path))bad.push(a.to_path)}
- if(bad.length){DBX_GUARD_LOG.push({ep,paths:ps,at:Date.now()});throw new DbxErr('Blocked: the app never deletes or moves folders or files it did not create ('+bad.join(', ')+')','guard',0)}}
+ const ok=ep==='files/move_v2'&&a.from_path&&a.to_path&&!a.entries&&dbxMoveOk(a.from_path,a.to_path);
+ if(!ok){DBX_GUARD_LOG.push({ep,paths:ps,at:Date.now()});throw new DbxErr('Blocked: the app never deletes anything in Dropbox and never moves folders or files it did not create ('+(ps.join(', ')||ep)+')','guard',0)}}
 let SM=null;
 const Sync={state:'idle',msg:'',
+ /* move one of the app's own files into a _Deleted… folder (guarded); failures leave the file where it is – never deleted */
+ async trashMove(from,to,opt){try{await Dbx.rpc('files/move_v2',{from_path:from,to_path:to,autorename:true},opt);return true}catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind!=='notfound')console.warn('Keeping file in place:',from,e.message);return false}},
  async loadMeta(){SM=(await DB.get('meta','sync'))||null;if(!SM)await this.resetMeta(false)},
  async resetMeta(persist=true){SM={id:'sync',dirty:{},revs:{},photoRev:{},photoUp:{},remoteDel:[],cursor:null,lastSync:0,regRev:{},regHash:{},linkOf:{}};Sync._lazyFail&&Sync._lazyFail.clear();if(persist)await DB.put('meta',SM)},
  saveMeta(){clearTimeout(this._mt);this._mt=setTimeout(()=>DB.put('meta',SM).catch(console.error),250)},
  markDirty(b){if(!SM||!b)return;SM.dirty[b]=(SM.dirty[b]||0)+1;this.saveMeta();this.schedule();this.pill()},
  markAllDirty(){if(!SM)return;['settings','templates',...S.projects.map(p=>'projects/'+p.id),...[...TOMBS.values()].map(t=>t.bundle)].forEach(b=>SM.dirty[b]=(SM.dirty[b]||0)+1);this.saveMeta()},
- queueRemoteDelete(id,drawing,pid){if(!SM||!Dbx.connected())return;const p=pid&&byId('projects',pid);if(p&&pfLinked(p)){SM.remoteDel.push({pid,id,drawing:!!drawing,dbx:p.dbx});this.saveMeta();return}const d=drawing?'/drawings/':'/photos/';SM.remoteDel.push(d+id+'.jpg',d+id+'.orig.jpg',d+id+'.json');this.saveMeta()},
+ /* "delete" of a photo in Dropbox = move it to Photos/_Deleted issues/ (global legacy folder: /photos/_Deleted issues/). Drawing files stay
+  where they are. The app never deletes a file. */
+ queueRemoteDelete(id,drawing,pid,tag){if(!SM||!Dbx.connected())return;const p=pid&&byId('projects',pid);const q={pid:pid||null,id,drawing:!!drawing,tag:tag||'',day:today()};if(p&&pfLinked(p))q.dbx=p.dbx;else q.g=1;SM.remoteDel.push(q);this.saveMeta()},
  schedule(ms=4000){if(!Dbx.connected()||!Dbx.prefs().autoSync)return;clearTimeout(this._st);this._st=setTimeout(()=>this.now(),ms)},
  setState(s,msg=''){this.state=s;this.msg=msg;this.pill()},
  pending(){return SM?Object.keys(SM.dirty).length:0},
@@ -1690,7 +1704,10 @@ const Sync={state:'idle',msg:'',
    try{const m=await Dbx.upload(path,body,rev?{'.tag':'update',update:rev}:{'.tag':'add'},opt);SM.revs[revKey]=m.rev;break}
    catch(e){if(e.kind!=='conflict'||a>=8)throw e;let got;try{got=await Dbx.download(path,opt)}catch(x){if(x.kind==='notfound'){delete SM.revs[revKey];continue}throw x}const b=JSON.parse(await got.blob.text());if(await this.apply(key,b))safeRender();SM.revs[revKey]=got.meta&&got.meta.rev?got.meta.rev:(await Dbx.rpc('files/get_metadata',{path},opt)).rev}}},
  async photos(){const remote=new Map();for(const dir of['/photos','/drawings'])for(const e of(await Dbx.listAll(Dbx.p(dir))).entries)if(e['.tag']==='file')remote.set(e.name.toLowerCase(),{...e,dir});
-  for(const p of SM.remoteDel.slice()){if(typeof p!=='string')continue;try{await Dbx.rpc('files/delete_v2',{path:Dbx.p(p)})}catch(e){if(e.kind!=='notfound')throw e}SM.remoteDel.splice(SM.remoteDel.indexOf(p),1);remote.delete(p.split('/').pop())}
+  for(const q of SM.remoteDel.slice()){const leg=typeof q==='string';if(!leg&&!q.g)continue; /* legacy queue entries ('/photos/<id>.jpg') are handled the same way */
+   const names=leg?(/^\/photos\/[^/]+$/.test(q)?[q.slice(8)]:[]):q.drawing?[]:[q.id+'.jpg',q.id+'.orig.jpg',q.id+'.json'];
+   for(const nm of names){const r=remote.get(nm.toLowerCase());if(!r||r.dir!=='/photos')continue;await this.trashMove(Dbx.p('/photos/'+r.name),Dbx.p('/photos/'+DEL_DIR+'/'+((leg?today():q.day)||today())+' '+r.name));remote.delete(nm.toLowerCase())}
+   SM.remoteDel.splice(SM.remoteDel.indexOf(q),1);this.saveMeta()}
   const drawIds=new Set(S.drawings.map(d=>d.imageId));const upOn=Dbx.prefs().photos;let n=0;const own=photoOwners(),inLinked=id=>{const pid=own.get(id);const pr=pid&&byId('projects',pid);return!!(pr&&pfLinked(pr))};
   if(upOn)for(const id of await DB.keys('photos')){if(inLinked(id))continue;const p=await DB.get('photos',id);if(!p)continue;const dir=(p.kind==='drawing'||drawIds.has(id))?'/drawings':'/photos';const r=remote.get(id+'.jpg');const t=p.updatedAt||0;
    if(!(!r||(t>Date.parse(r.server_modified)&&t>(SM.photoUp[id]||0))))continue;
@@ -2417,7 +2434,7 @@ const PF_ID_RE=/\[([A-Za-z0-9]+)\]\.jpg$/;
  inspection). Same date + title twice in a project → " (2)", " (3)" by creation order. Renaming an inspection moves its photo files into the
  new subfolder; the old (empty) subfolder is left in place – the app never deletes folders. */
 function pfInspDir(aid){const a=byId('audits',aid);if(!a)return'';const base=a2=>dbxName(`${a2.date||''} ${String(a2.title||'').trim()||'Inspection'}`.trim()).slice(0,60);const b=base(a);
- const same=S.audits.filter(x=>x.projectId===a.projectId&&base(x).toLowerCase()===b.toLowerCase()).sort((x,y)=>auditSeq(x.id)-auditSeq(y.id));const k=same.indexOf(a);return k>0?`${b} (${k+1})`:b}
+ const same=S.audits.filter(x=>x.projectId===a.projectId&&base(x).toLowerCase()===b.toLowerCase()).sort((x,y)=>auditSeq(x.id)-auditSeq(y.id));const k=same.indexOf(a);const r=k>0?`${b} (${k+1})`:b;return isDelDir(r)?r+' (1)':r}
 Object.assign(Sync,{proj:{},_pl:{},
  projErr(pid,e){if(['offline','auth'].includes(e.kind))return false;const p=byId('projects',pid);if(!p)return['noaccess','notfound'].includes(e.kind);
   const ro=/view access|no_write_permission|insufficient_permissions/.test(e.message)||e.message===READONLY_MSG;
@@ -2442,7 +2459,10 @@ Object.assign(Sync,{proj:{},_pl:{},
    SM.regTomb.splice(SM.regTomb.indexOf(t),1);if(SM.regHash)delete SM.regHash[t.id];this.saveMeta()}}, // entry already replaced by a new project (other id) → left alone
  async regWrite(){SM.regHash=SM.regHash||{};await this.regTombs();for(const p of S.projects){if(!pfLinked(p)||!p.code||p.stub||!projRole(p).admin)continue;const b=this.regBody(p);const h=JSON.stringify(b);if(SM.regHash[p.id]===h)continue;
   try{await Dbx.upload(this.regPath(p.code),new Blob([h],{type:'application/json'}),{'.tag':'overwrite'});SM.regHash[p.id]=h;this.saveMeta()}catch(e){if(['offline','auth'].includes(e.kind))throw e;console.warn('Registry write failed',e.message)}}
-  for(const c of(SM.regDel||[]).slice()){try{await Dbx.rpc('files/delete_v2',{path:this.regPath(c)})}catch(e){if(e.kind!=='notfound'){if(['offline','auth'].includes(e.kind))throw e;continue}}SM.regDel.splice(SM.regDel.indexOf(c),1);this.saveMeta()}},
+  /* old pending registry deletes (older app versions) → tombstone the entry instead (never files/delete) */
+  for(const c of(SM.regDel||[]).slice()){const path=this.regPath(c);try{const cur=JSON.parse(await(await Dbx.download(path)).blob.text());
+    if(cur&&cur.id&&!cur.deleted&&!byId('projects',cur.id))await Dbx.upload(path,new Blob([JSON.stringify(this.regTombBody({id:cur.id,code:c,at:Date.now(),by:myEmail()},cur))],{type:'application/json'}),{'.tag':'overwrite'})}
+   catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind!=='notfound')console.warn('Registry tombstone',e.message)}SM.regDel.splice(SM.regDel.indexOf(c),1);this.saveMeta()}},
  async regRead(){SM.regRev=SM.regRev||{};let es;try{es=(await Dbx.listAll(Dbx.p('/_registry/projects'))).entries.filter(e=>e['.tag']==='file'&&/\.json$/i.test(e.name))}catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind!=='notfound'){console.warn('Registry read failed',e.message);return false}es=[]}
   const seen=new Set(es.map(e=>e.path_lower));for(const k of[...REG.keys()])if(!seen.has(k)){REG.delete(k);await DB.del('meta','reg:'+k);delete SM.regRev[k]} // entry gone from Dropbox → drop the cached copy (stale 'Project exists')
   let changed=false;for(const e of es){let r=REG.get(e.path_lower);if(!r||SM.regRev[e.path_lower]!==e.rev){try{const{blob}=await Dbx.download(e.path_lower);r=JSON.parse(await blob.text())}catch(x){if(['offline','auth'].includes(x.kind))throw x;continue}
@@ -2451,17 +2471,22 @@ Object.assign(Sync,{proj:{},_pl:{},
  /* ---- photos in project folders ---- */
  async linkedList(p,L){const opt={root:L.root},m=new Map(),ed=new Map();
   for(const[dir,kind]of[['/Photos','photo'],['/Drawings','drawing']])for(const e of(await Dbx.listAll(L.base+dir,kind==='photo',opt)).entries){if(e['.tag']!=='file')continue;const x=PF_ID_RE.exec(e.name);if(!x)continue;
-   const sg=String(e.path_display||e.path_lower||'').split('/'),par=sg[sg.length-2]||'',sub=kind==='photo'&&par.toLowerCase()!=='photos'?(String(sg[sg.length-3]||'').toLowerCase()==='photos'?par:null):'';if(sub===null)continue; /* only Photos/ and Photos/<inspection>/ */
+   const sg=String(e.path_display||e.path_lower||'').split('/'),par=sg[sg.length-2]||'',sub=kind==='photo'&&par.toLowerCase()!=='photos'?(String(sg[sg.length-3]||'').toLowerCase()==='photos'?par:null):'';if(sub===null||isDelDir(sub))continue; /* only Photos/ and Photos/<inspection>/ – Photos/_Deleted issues/ is never read back, renumbered or renamed */
    m.set(x[1],{...e,kind,sub,path_display:L.base+dir+(sub?'/'+sub:'')+'/'+e.name})} // own base: also right for ns: paths
   for(const e of(await Dbx.listAll(L.base+'/_siteinspection/edits',false,opt)).entries)if(e['.tag']==='file')ed.set(e.name.toLowerCase(),e);
   return this._pl[p.id]={m,ed,at:Date.now()}},
  async linkedPhotos(){for(const p of this.linkedProjects()){if(this.proj[p.id]&&this.proj[p.id].state!=='ok')continue;try{await this.photosOf(p)}catch(e){if(!this.projErr(p.id,e))throw e}}
-  for(const q of(SM.remoteDel||[]).slice()){if(typeof q==='string'||byId('projects',q.pid))continue;try{await this.delLinked({id:q.pid,dbx:q.dbx},q)}catch(e){if(['offline','auth'].includes(e.kind))throw e}SM.remoteDel.splice(SM.remoteDel.indexOf(q),1);this.saveMeta()}},
+  for(const q of(SM.remoteDel||[]).slice()){if(typeof q==='string'||q.g||!q.dbx||byId('projects',q.pid))continue;try{await this.delLinked({id:q.pid,dbx:q.dbx},q)}catch(e){if(['offline','auth'].includes(e.kind))throw e}SM.remoteDel.splice(SM.remoteDel.indexOf(q),1);this.saveMeta()}},
  async delLinked(p,q){const L=await pfLoc(p);const{m,ed}=this._pl[p.id]&&Date.now()-this._pl[p.id].at<60000?this._pl[p.id]:await this.linkedList(p,L);const opt={root:L.root};const r=m.get(q.id);
-  const paths=[r&&r.path_display,ed.has(q.id.toLowerCase()+'.orig.jpg')&&L.base+'/_siteinspection/edits/'+q.id+'.orig.jpg',ed.has(q.id.toLowerCase()+'.json')&&L.base+'/_siteinspection/edits/'+q.id+'.json'].filter(Boolean);
-  for(const x of paths){try{await Dbx.rpc('files/delete_v2',{path:x},opt)}catch(e){if(e.kind!=='notfound')throw e}}m.delete(q.id)},
+  /* never deleted: the photo moves to Photos/_Deleted issues/<date> <I-code>-<original name>, its edit sidecars to _siteinspection/edits/_deleted/;
+     drawing files stay where they are */
+  if(q.drawing){m.delete(q.id);return}
+  if(r&&r.path_display){const nm=dbxBase(r.path_display),tg=q.tag&&!/^I\d+-/.test(nm)?q.tag+'-':'';try{await Dbx.rpc('files/create_folder_v2',{path:L.base+'/Photos/'+DEL_DIR,autorename:false},opt)}catch(e){if(['offline','auth'].includes(e.kind))throw e}
+   await this.trashMove(r.path_display,L.base+'/Photos/'+DEL_DIR+'/'+(q.day||today())+' '+tg+nm,opt)}
+  for(const x of['.orig.jpg','.json'])if(ed.has(q.id.toLowerCase()+x))await this.trashMove(L.base+'/_siteinspection/edits/'+q.id+x,L.base+'/_siteinspection/edits/_deleted/'+q.id+x,opt);
+  m.delete(q.id)},
  async photosOf(p){const L=await pfLoc(p),opt={root:L.root};let{m:remote,ed}=await this.linkedList(p,L);
-  for(const q of(SM.remoteDel||[]).slice()){if(typeof q==='string'||q.pid!==p.id)continue;await this.delLinked(p,q);SM.remoteDel.splice(SM.remoteDel.indexOf(q),1);this.saveMeta()}
+  for(const q of(SM.remoteDel||[]).slice()){if(typeof q==='string'||q.g||q.pid!==p.id)continue;await this.delLinked(p,q);SM.remoteDel.splice(SM.remoteDel.indexOf(q),1);this.saveMeta()}
   const want=new Map();for(const it of S.items)if(it.projectId===p.id)(it.photos||[]).forEach((id,k)=>{const sd=pfInspDir(it.auditId);want.set(id,{dir:'/Photos'+(sd?'/'+sd:''),name:pfPhotoName(it,k,id)})});
   for(const d of S.drawings)if(d.projectId===p.id&&d.imageId)want.set(d.imageId,{dir:'/Drawings',name:pfDrawName(d,d.imageId)});let n=0,got=false;
   const mkd=new Set();for(const[id,w]of want){if(TOMBS.has('photos:'+id))continue;const r=remote.get(id);const loc=await DB.get('photos',id);
