@@ -907,7 +907,7 @@ async function remove(store,id){const rec=S[store].find(x=>x.id===id);const b=re
 async function saveSettings(){S.settings.id='main';S.settings.updatedAt=Date.now();await DB.put('settings',S.settings);Sync.markDirty('settings')}
 async function getPhoto(id){if(!id)return null;if(photoCache.has(id))return photoCache.get(id);let p=await DB.get('photos',id);if(!p&&Dbx.connected()&&!TOMBS.has('photos:'+id))p=await Sync.lazyPhoto(id);if(p)photoCache.set(id,p);return p}
 async function putPhoto(p){p.updatedAt=Date.now();await DB.put('photos',p);photoCache.set(p.id,p);Sync.schedule();return p}
-async function delPhoto(id,pid,it){if(!id)return;const p=await DB.get('photos',id);await DB.del('photos',id);photoCache.delete(id);if(pid){await addTomb('photos:'+id,'projects/'+pid);Sync.queueRemoteDelete(id,p&&p.kind==='drawing',pid,it&&it.auditId?insCode(it.auditId):'')}} // Dropbox file is moved to Photos/_Deleted issues/, never deleted
+async function delPhoto(id,pid,it){if(!id)return;const p=await DB.get('photos',id);await DB.del('photos',id);photoCache.delete(id);if(pid){await addTomb('photos:'+id,'projects/'+pid);Sync.queueRemoteDelete(id,p&&p.kind==='drawing',pid,'')}} // Dropbox file is moved to Photos/_Deleted issues/, never deleted
 const cats=()=>S.settings.categories&&S.settings.categories.length?S.settings.categories:DEFAULT_CATS;
 const byId=(store,id)=>S[store].find(x=>x.id===id);
 const projItems=pid=>S.items.filter(i=>i.projectId===pid);
@@ -932,9 +932,9 @@ const tradePfx=cat=>{const c=String(cat||'').trim();if(!c)return'GEN';if(_PFX.ha
 const pfxRank=p=>{const k=PFX_ORDER.indexOf(p);return k<0?99:k};
 const pad3=n=>String(n||0).padStart(3,'0');
 const issueNo=i=>!i?'':tradePfx(i.category)+'-'+pad3(i.number);
-const issueRef=(i,ctx)=>!i?'':ctx&&ctx===i.auditId?issueNo(i):insCode(i.auditId)+'-'+issueNo(i); // ctx = inspection id of the current view (same inspection → "MEC-003")
+const issueRef=(i,ctx)=>!i?'':issueNo(i); // display ref is always just "MEC-003" (no I<k>- tag; Fares). Multi-inspection views show the inspection name/row instead. Never used as a key – links/flags resolve by id
 const numCmp=(a,b)=>pfxRank(tradePfx(a.category))-pfxRank(tradePfx(b.category))||auditSeq(a.auditId)-auditSeq(b.auditId)||(a.number||0)-(b.number||0)||(a.createdAt||0)-(b.createdAt||0); // trade group, inspection, number
-const pinLabel=(i,multi)=>`<small>${multi?'I'+auditSeq(i.auditId)+'·':''}${tradePfx(i.category)}</small>${i.number}`; // pin head: trade prefix over the number
+const pinLabel=(i,multi)=>`<small>${tradePfx(i.category)}</small>${i.number}`; // pin head: trade prefix over the number
 const multiAudit=items=>new Set(items.map(i=>i.auditId)).size>1;
 
 async function seed(){if(S.settings.seeded)return;S.settings.seeded=true;
@@ -1314,7 +1314,7 @@ async function initViewer(d,params){const vp=$('#viewer'),layer=$('#layer'),img=
   const pin={drawingId:d.id,x:+x.toFixed(5),y:+y.toFixed(5)};
   if(V.placeId){const it=byId('items',V.placeId);it.pin=pin;await save('items',it);toast(`Pin ${issueNo(it)} placed`);location.hash='#/item/'+it.id;return}
   let audits=S.audits.filter(a=>a.projectId===d.projectId);const unp=visItems(d.projectId).filter(i=>!i.pin&&canEditItem(i)).sort((a,b)=>numCmp(a,b));
-  const r2=await modal({title:'Add pin',body:`<div class="form-grid"><label class="full"><span>Create a new issue at this location</span><select name="audit">${audits.length?audits.map(a=>`<option value="${a.id}">in inspection: ${esc(a.title)}</option>`).join(''):'<option value="">(a new inspection will be created)</option>'}</select></label>${unp.length?`<label class="full"><span>…or link an existing unpinned issue</span><select name="existing"><option value="">— choose issue —</option>${unp.map(i=>`<option value="${i.id}">${issueRef(i)} ${esc(i.title||'Untitled')}</option>`).join('')}</select></label>`:''}</div>`,
+  const r2=await modal({title:'Add pin',body:`<div class="form-grid"><label class="full"><span>Create a new issue at this location</span><select name="audit">${audits.length?audits.map(a=>`<option value="${a.id}">in inspection: ${esc(a.title)}</option>`).join(''):'<option value="">(a new inspection will be created)</option>'}</select></label>${unp.length?`<label class="full"><span>…or link an existing unpinned issue</span><select name="existing"><option value="">— choose issue —</option>${unp.map(i=>`<option value="${i.id}">${issueRef(i)} ${esc(i.title||'Untitled')}${new Set(unp.map(x=>x.auditId)).size>1?' – '+esc((byId('audits',i.auditId)||{}).title||''):''}</option>`).join('')}</select></label>`:''}</div>`,
    buttons:[{label:'Cancel',value:null},...(unp.length?[{label:'Link existing',value:'link'}]:[]),{label:'New issue here',value:'new',cls:'primary'}],collect:(el,v)=>({v,audit:el.querySelector('[name=audit]').value,existing:el.querySelector('[name=existing]')?.value})});
   if(!r2)return;if(r2.v==='link'){if(!r2.existing)return toast('Choose an issue to link');const it=byId('items',r2.existing);it.pin=pin;await save('items',it);toast(`Pin ${issueNo(it)} placed`);render();return}
   let aid=r2.audit;if(!aid){aid=(await save('audits',{id:uid(),projectId:d.projectId,title:'Inspection 1',date:today(),inspector:defaultInspector()})).id}
@@ -1405,7 +1405,7 @@ async function generatePDF(d,o,opt={}){await coFresh();const{jsPDF}=window.jspdf
   [a?`${a.title}${a.date?'  ·  '+fmtDate(a.date):''}${a.inspector?'  ·  '+a.inspector:''}`:`${rcPlural(d.audits.length,'inspection')}${dts.length?'  ·  '+fmtDate(dts[0])+(dts[dts.length-1]!==dts[0]?' – '+fmtDate(dts[dts.length-1]):''):''}`],[company?'Inspecting company: '+company:'',1]].filter(l=>l[0]);
  y=await pdfCover(doc,{co,p,acc,M,font,T,kicker:o.subtitle||'Site Inspection Report',title:o.title||p.name,lines:cl,when:'Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),all});
  const rows=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)]];
- if(a)rows.push(['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]);else rows.push(['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${insCode(x.id)} · ${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')]);
+ if(a)rows.push(['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]);else rows.push(['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')]);
  rows.push(['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]);
  for(const[k,v]of rows.filter(r=>r[1])){font(9.5,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,6);const h=Math.max(6.4,ls.length*4.3+2.4);ensure(h);font(8,'bold',GREY);T(k.toUpperCase(),M,y);font(9.5,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4,PW-M,y+h-4);y+=h}
  y+=3;ensure(16);
@@ -2258,12 +2258,12 @@ function flagBannerHTML(i,p,R){const f=i.flag;const links=(i.links||[]).map(l=>b
  if(f){const by=personLabel(p,f.byEmail,f.byName,f.byDesig),mine=flaggedToMe(i,R),byMe=eqEmail(f.byEmail,R.email);
   const hist=(f.history||[]).map(x=>`<li>${fmtDT(x.at)} – ${esc(x.by)}: ${esc(x.a)}${x.note?' – “'+esc(x.note)+'”':''}</li>`).join('');
   h+=`<div class="card pad flag-card st-${f.status}"><div class="flag-h">⚑ <b>${f.status==='pending'?'Flagged to '+esc(f.toTrade)+(f.toName?' – '+esc(f.toName):''):f.status==='accepted'?'Accepted by '+esc(f.toTrade)+(f.acceptedBy?' – '+esc(f.acceptedBy):''):'Returned to '+esc(f.fromTrade||by)}</b></div>
-   <div class="small">Raised by <b>${esc(by)}</b>${f.fromTrade?' from '+esc(f.fromTrade):''} · ${fmtDT(f.at)}${f.fromItem&&byId('items',f.fromItem)?` · linked to <a href="#/item/${f.fromItem}">${issueRef(byId('items',f.fromItem),i.auditId)}</a>`:''}</div>
+   <div class="small">Raised by <b>${esc(by)}</b>${f.fromTrade?' from '+esc(f.fromTrade):''} · ${fmtDT(f.at)}${f.fromItem&&byId('items',f.fromItem)?` · linked to <a href="#/item/${f.fromItem}">${issueRef(byId('items',f.fromItem),i.auditId)}</a>${byId('items',f.fromItem).auditId!==i.auditId?` <small>(${esc((byId('audits',byId('items',f.fromItem).auditId)||{}).title||'')})</small>`:''}`:''}</div>
    ${f.note?`<p class="flag-note">“${esc(f.note)}”</p>`:''}${f.status==='returned'&&f.returnNote?`<p class="flag-note"><b>${esc(f.returnedBy||'')}:</b> “${esc(f.returnNote)}”</p>`:''}
    <div class="actions">${f.status==='pending'&&(mine||R.admin)&&!R.ro?`<button class="btn sm primary" data-act="flag-accept" data-id="${i.id}">${ic('check')} Accept & classify</button><button class="btn sm" data-act="flag-return" data-id="${i.id}">↩ Return with note</button>`:''}
    ${f.status==='pending'&&byMe?`<button class="btn sm ghost" data-act="flag-withdraw" data-id="${i.id}">Withdraw flag</button>`:''}${f.status==='returned'&&(byMe||R.admin)?`<button class="btn sm" data-act="flag-item" data-id="${i.id}">⚑ Flag to another trade</button>`:''}</div>
    ${hist?`<details class="small"><summary>History</summary><ul>${hist}</ul></details>`:''}</div>`}
- if(links.length)h+=`<div class="card pad small flag-links">Linked issues for other trades: ${links.map(l=>`<a href="#/item/${l.id}">${issueRef(l,i.auditId)} ${esc(l.category||'')}</a> ${l.flag?flagBadgeHTML(l,p):''}`).join(' · ')}</div>`;return h}
+ if(links.length)h+=`<div class="card pad small flag-links">Linked issues for other trades: ${links.map(l=>`<a href="#/item/${l.id}">${issueRef(l,i.auditId)} ${esc(l.category||'')}</a>${l.auditId!==i.auditId?` <small>(${esc((byId('audits',l.auditId)||{}).title||'')})</small>`:''} ${l.flag?flagBadgeHTML(l,p):''}`).join(' · ')}</div>`;return h}
 async function flagDialog(it,{fromNew=false}={}){const p=byId('projects',it.projectId),R=projRole(p);if(R.ro)return;
  const mine=R.trades||(R.own)||null;const fromTrade=it.category||(mine&&mine.length===1?mine[0]:'');
  const targets=taxTrades().filter(t=>t!==it.category);
@@ -2522,10 +2522,10 @@ Object.assign(Sync,{proj:{},_pl:{},
  async linkedPhotos(){for(const p of this.linkedProjects()){if(this.proj[p.id]&&this.proj[p.id].state!=='ok')continue;try{await this.photosOf(p)}catch(e){if(!this.projErr(p.id,e))throw e}}
   for(const q of(SM.remoteDel||[]).slice()){if(typeof q==='string'||q.g||!q.dbx||byId('projects',q.pid))continue;try{await this.delLinked({id:q.pid,dbx:q.dbx},q)}catch(e){if(['offline','auth'].includes(e.kind))throw e}SM.remoteDel.splice(SM.remoteDel.indexOf(q),1);this.saveMeta()}},
  async delLinked(p,q){const L=await pfLoc(p);const{m,ed}=this._pl[p.id]&&Date.now()-this._pl[p.id].at<60000?this._pl[p.id]:await this.linkedList(p,L);const opt={root:L.root};const r=m.get(q.id);
-  /* never deleted: the photo moves to Photos/_Deleted issues/<date> <I-code>-<original name>, its edit sidecars to _siteinspection/edits/_deleted/;
+  /* never deleted: the photo moves to Photos/_Deleted issues/<date> <original name>, its edit sidecars to _siteinspection/edits/_deleted/;
      drawing files stay where they are */
   if(q.drawing){m.delete(q.id);return}
-  if(r&&r.path_display){const nm=dbxBase(r.path_display),tg=q.tag&&!/^I\d+-/.test(nm)?q.tag+'-':'';try{await Dbx.rpc('files/create_folder_v2',{path:L.base+'/Photos/'+DEL_DIR,autorename:false},opt)}catch(e){if(['offline','auth'].includes(e.kind))throw e}
+  if(r&&r.path_display){const nm=dbxBase(r.path_display),tg='' /* no I<k>- tag any more (Fares) – the [id] keeps archive names unique; existing archive files are never renamed */;try{await Dbx.rpc('files/create_folder_v2',{path:L.base+'/Photos/'+DEL_DIR,autorename:false},opt)}catch(e){if(['offline','auth'].includes(e.kind))throw e}
    await this.trashMove(r.path_display,L.base+'/Photos/'+DEL_DIR+'/'+(q.day||today())+' '+tg+nm,opt)}
   for(const x of['.orig.jpg','.json'])if(ed.has(q.id.toLowerCase()+x))await this.trashMove(L.base+'/_siteinspection/edits/'+q.id+x,L.base+'/_siteinspection/edits/_deleted/'+q.id+x,opt);
   m.delete(q.id)},
@@ -2660,7 +2660,7 @@ async function conPDF(d,o,opt={}){await coFresh();const{jsPDF}=window.jspdf;cons
  const all=d.allItems,cnt=s=>all.filter(i=>i.status===s).length,dts=d.audits.map(x=>x.date).filter(Boolean).sort(),charts=o.charts!==false;
  const cl=[[[p.code?'Project '+p.code:'',p.client?'Client: '+p.client:''].filter(Boolean).join('  ·  ')],[`${rcPlural(d.audits.length,'inspection')}${dts.length?'  ·  '+fmtDate(dts[0])+(dts[dts.length-1]!==dts[0]?' – '+fmtDate(dts[dts.length-1]):''):''}${d.full?'':'  ·  '+roleScopeText(p)}`],[company?'Inspecting company: '+company:'',1]].filter(l=>l[0]);
  y=await pdfCover(doc,{co,p,acc,M,font,T,kicker:d.full?'Consolidated inspection report':'Inspection report – '+(d.role.desig?desigOf(d.role.desig).label:'my trades'),title:o.title||p.name,lines:cl,when:'Generated '+fmtDT(Date.now())+(myName()?' by '+myName():''),all});
- const rows=[['Project',p.folderName||p.name],['Project code',p.code],['Client',p.client],['Site address',p.address],['Dropbox folder',pfLinked(p)?p.dbx.path:''],['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${insCode(x.id)} · ${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')],
+ const rows=[['Project',p.folderName||p.name],['Project code',p.code],['Client',p.client],['Site address',p.address],['Dropbox folder',pfLinked(p)?p.dbx.path:''],['Inspections included',d.audits.slice().sort((x,y)=>auditSeq(x.id)-auditSeq(y.id)).map(x=>`${x.title} (${fmtDate(x.date)}${x.inspector?', '+x.inspector:''})`).join('\n')],
   ['Project team',(p.team||[]).map(m=>`${m.name||m.email} – ${desigOf(m.designation).label}${m.role==='admin'||eqEmail(m.email,p.ownerEmail)?' (admin)':''}`).join('\n')],['Scope',d.full?'All trades':roleScopeText(p)],['Cross-trade flags',d.flagged.length?String(d.flagged.length):''],['Prepared by',[company,...co.lines].filter(Boolean).join('\n')]];
  for(const[k,v]of rows.filter(r=>r[1])){font(9.5,'normal');const ls=doc.splitTextToSize(String(v),PW-2*M-46).slice(0,10);const h=Math.max(6.4,ls.length*4.3+2.4);ensure(h);font(8,'bold',GREY);T(k.toUpperCase(),M,y);font(9.5,'normal');T(ls,M+46,y);doc.setDrawColor(230,234,240);doc.setLineWidth(.2);doc.line(M,y+h-4,PW-M,y+h-4);y+=h}
  if(!all.length){y+=3;ensure(8);font(9,'italic',GREY);T('No issues are recorded for this report.',M,y);y+=6}
@@ -2705,7 +2705,7 @@ Object.assign(ACT,{'con-report':el=>conDialog(el.dataset.id)});
  by all users through <root>/_registry/companies.json (format sap-companies-1): one record per company + the shared defaults
  record "_shared" (street address, PO Box, T, M, e-mail used by every company unless a company overrides it). Record-level
  last-write-wins on updatedAt, soft delete (deleted:true). Normal sign-in scopes only. */
-const photoName=(it,k,q)=>`${q&&it?insCode(it.auditId)+'-':''}${issueNo(it||{})} ${String((it&&it.title)||'').trim()||'Untitled issue'} - ${k+1}`;
+const photoName=(it,k,q)=>`${issueNo(it||{})} ${String((it&&it.title)||'').trim()||'Untitled issue'} - ${k+1}`;
 const photoSrcName=(it,id)=>(it&&it.photoSrc&&it.photoSrc[id])||'';
 
 /* ---- issue page: photo pane (left on tablets / laptops, on top on phones) ---- */
