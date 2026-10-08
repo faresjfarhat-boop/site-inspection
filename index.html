@@ -324,6 +324,9 @@ body.wl-mode .topnav{display:none}
 .heic-pill{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:600;background:#0f172a;color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap}
 .heic-pill .muted{color:#cbd5e1;font-weight:500}.heic-pill .spin{border-color:rgba(255,255,255,.35);border-top-color:#fff}
 
+.diag{white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;background:var(--bg,#f6f7f9);border:1px solid var(--line,#dde1e6);border-radius:8px;padding:10px;margin:12px 0 0;max-height:420px;overflow:auto;user-select:text;-webkit-user-select:text}
+.upd-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));z-index:9999;display:flex;gap:12px;align-items:center;background:#1f2937;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:14px;max-width:92vw}
+
 </style>
 </head>
 <body>
@@ -1146,7 +1149,7 @@ function viewSettings(){const st=S.settings;onAfter(async()=>{if(navigator.stora
  ${coSettingsHTML()}${pfParentsHTML()}
  <div class="card pad" style="margin-top:16px"><h2 style="margin-top:0;font-size:17px">Backup & restore</h2><p class="muted small">All data (projects, inspections, issues, photos, drawings, templates) is stored locally in this browser (IndexedDB). Export a backup regularly or to move data to another device/browser.</p>
  <div class="actions"><button class="btn primary" data-act="backup">${ic('download')} Export backup (.json)</button><label class="btn">${ic('upload')} Import backup<input type="file" accept="application/json,.json" hidden data-change="restore"></label><button class="btn" data-act="csv-all">${ic('download')} Export all issues (CSV)</button><button class="btn danger" data-act="wipe">${ic('trash')} Delete all data</button></div><p class="help" id="storage"></p></div>
- ${dbxSettingsHTML()}${aiSettingsHTML()}
+ ${dbxSettingsHTML()}${aiSettingsHTML()}${diagHTML()}
  <p class="help" style="margin-top:16px">Site Inspection – browser edition. Works offline; no account or server needed.</p>`}
 const notFound=()=>emptyHTML('Not found','This record no longer exists.',`<a class="btn" href="#/">Back to projects</a>`);
 
@@ -1369,7 +1372,7 @@ async function reportDialog(scope){const isA=scope.type==='audit';const obj=byId
  const toDbx=r.v==='dbx';const done=busy(toDbx?'Generating PDF for Dropbox…':'Generating PDF…');try{const doc=await generatePDF(d,r.o,{noDownload:toDbx});if(!toDbx)toast('PDF report downloaded');done();
   if(Dbx.connected()&&(toDbx||Dbx.prefs().autoPdf))await Sync.uploadReport(doc.output('blob'),d,r.o)}catch(e){console.error(e);alertBox('PDF generation failed: '+e.message)}finally{done()}}
 
-async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});window.__lastChartBoxes=[];window.__lastCharts=[];
+async function generatePDF(d,o,opt={}){await coFresh();const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});window.__lastChartBoxes=[];window.__lastCharts=[];
  const acc=hex2rgb(o.color),light=mix(acc,.88),M=14,p=d.project,a=d.audit;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
  const T=(t,x,yy,op)=>doc.text(Array.isArray(t)?t:String(t??''),x,yy,op);
  const font=(sz,st='normal',col=DARK)=>{doc.setFont('helvetica',st);doc.setFontSize(sz);doc.setTextColor(...col)};
@@ -1404,7 +1407,7 @@ async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new j
   const head=()=>{doc.setFillColor(...acc);doc.rect(M,y,PW-2*M,7,'F');font(8,'bold',[255,255,255]);let x=M;cols.forEach(([t,w])=>{T(t,x+1.5,y+4.8);x+=w});y+=7};head();
   items.forEach((it,ix)=>{font(8,'normal');const v=[a?'#'+it.number:issueRef(it),it.title||'Untitled',it.location,[it.category,it.defectType].filter(Boolean).join('\n'),it.priority,phaseLabel(it.phase),it.status,it.assignee,fmtDate(it.dueDate)];const ls=v.map((s,c)=>doc.splitTextToSize(String(s||'–'),cols[c][1]-3).slice(0,4));const h=Math.max(...ls.map(l=>l.length))*3.4+3.2;
    if(y+h>PH-16){newPage();head()}if(ix%2){doc.setFillColor(246,248,251);doc.rect(M,y,PW-2*M,h,'F')}let x=M;
-   ls.forEach((l,c)=>{if(c===4)font(8,'bold',hex2rgb(PRIO_COLOR[it.priority]));else if(c===6)font(8,'bold',hex2rgb(STATUS_COLOR[it.status]));else if(c===8&&isOver(it))font(8,'bold',[190,18,60]);else font(8,c===0?'bold':'normal',c===0?acc:DARK);T(l,x+1.5,y+4.2);x+=cols[c][1]});
+   ls.forEach((l,c)=>{if(c===4)font(8,'bold',hex2rgb(PRIO_COLOR[it.priority]||'#64748b'));else if(c===6)font(8,'bold',hex2rgb(STATUS_COLOR[it.status]));else if(c===8&&isOver(it))font(8,'bold',[190,18,60]);else font(8,c===0?'bold':'normal',c===0?acc:DARK);T(l,x+1.5,y+4.2);x+=cols[c][1]});
    doc.setDrawColor(226,232,240);doc.setLineWidth(.2);doc.line(M,y+h,PW-M,y+h);y+=h})}
  /* items */
  if(items.length){newPage();heading('Issue details');
@@ -1441,10 +1444,10 @@ async function generatePDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new j
  await pdfChrome(doc,co,{M,left:(o.title||p.name)+(p.reference?' · Ref '+p.reference:''),font,T});const n=doc.getNumberOfPages();
  const fname=`${safeName(o.title||p.name)}_${today()}.pdf`;window.__lastPdf={name:fname,pages:n};if(!opt.noDownload)doc.save(fname);return doc}
 
-async function printView(d,o){const done=busy('Preparing print view…');try{const acc=o.color,lt=`rgb(${mix(hex2rgb(acc),.88).join(',')})`,p=d.project,a=d.audit,per=+o.perRow||3,all=d.allItems,co=coInfo(coOf(p)),logo=co.logo,clogo=p.logo&&p.logo!==co.logo?p.logo:'';
+async function printView(d,o){const done=busy('Preparing print view…');try{await coFresh();const acc=o.color,lt=`rgb(${mix(hex2rgb(acc),.88).join(',')})`,p=d.project,a=d.audit,per=+o.perRow||3,all=d.allItems,co=coInfo(coOf(p)),logo=co.logo,clogo=p.logo&&p.logo!==co.logo?p.logo:'';
  const kv=[['Project',p.name],['Reference',p.reference],['Client',p.client],['Site address',p.address],['Project date',fmtDate(p.date)],...(a?[['Inspection',a.title],['Inspection date',fmtDate(a.date)],['Inspector',a.inspector],['Weather',a.weather],['Attendees',a.attendees]]:[['Inspections',d.audits.map(x=>`${x.title} (${fmtDate(x.date)})`).join(', ')]]),['Prepared by',[co.name,...co.lines].filter(Boolean).join('\n')],['Report date',fmtDT(Date.now())]].filter(r=>r[1]);
  const cnt=s=>all.filter(i=>i.status===s).length;let h=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.title)}</title><style>
-@page{size:A4;margin:13mm}*{box-sizing:border-box}body{font:10.5pt/1.4 Helvetica,Arial,sans-serif;color:#1e2430;margin:0;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{padding:0}}
+@page{size:A4;margin:13mm}*{box-sizing:border-box}body{font:10.5pt/1.4 Helvetica,Arial,sans-serif;color:#1e2430;margin:0;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.runhead{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:0 0 6px;border-bottom:1px solid #e2e8f0;font-size:8.5pt;color:#475569}.runhead img{height:26px;max-width:110px;object-fit:contain}.runhead span{margin-left:auto;color:#8a94a6}@media print{body{padding:0}}
 .cover{background:${acc};color:#fff;padding:26px;border-radius:6px;display:flex;justify-content:space-between;gap:20px}.cover h1{margin:6px 0;font-size:24pt}.cover .lg{background:#fff;border-radius:6px;padding:8px;align-self:flex-start}.cover .lg img{max-width:150px;max-height:84px;display:block}.cover .lgs{display:flex;flex-direction:column;gap:8px;align-self:flex-start}.cover .co{margin-top:14px;font-weight:bold}.cofoot{margin-top:28px;border-top:1px solid #dde3ea;padding-top:8px;font-size:8pt;color:#778;text-align:center}
 h2{color:${acc};border-bottom:2px solid ${acc};padding-bottom:4px;margin:24px 0 12px;font-size:15pt}dl{display:grid;grid-template-columns:150px 1fr;gap:5px 12px;margin:18px 0}dt{color:#667;font-weight:bold;font-size:8.5pt;text-transform:uppercase}dd{margin:0;white-space:pre-wrap}
 .stats{display:flex;gap:8px;margin:14px 0}.stats div{flex:1;border:1px solid #dde3ea;border-radius:6px;padding:8px;text-align:center;font-size:8pt;color:#667;text-transform:uppercase;font-weight:bold}.stats b{display:block;font-size:18pt}
@@ -1453,7 +1456,7 @@ table{width:100%;border-collapse:collapse;font-size:9pt}th{background:${acc};col
 .fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;margin:8px 0}.fields small{display:block;color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase}.imgs{display:grid;grid-template-columns:47% 47%;column-gap:14px;row-gap:8px;margin-top:8px;align-items:start}.ib{display:grid;grid-template-columns:47% 1fr;gap:14px;margin-top:8px;align-items:start}.ib.nophoto{grid-template-columns:1fr}.ib .main figure{margin:0}.ib .main img{width:auto;max-width:100%;height:auto;max-height:110mm;display:block;margin:0 auto}.ib .main figcaption{font-weight:bold;margin-top:3px}.kv{display:grid;grid-template-columns:28mm 1fr;gap:3px 8px;font-size:9.5pt}.nophoto .kv{grid-template-columns:28mm 1fr 28mm 1fr}.kv small,small.bl{color:#778;font-size:7.5pt;font-weight:bold;text-transform:uppercase;padding-top:2px}small.bl{display:block;margin-top:10px}.kv .over{color:#be123c;font-weight:bold}.imgs figure{margin:0}.imgs img{width:auto;max-width:100%;height:auto;max-height:110mm;display:block;margin:0 auto}.imgs figure,.ib .main figure{break-inside:avoid;page-break-inside:avoid}.imgs figcaption{font-weight:bold;margin-top:3px}figcaption{font-size:8pt;color:#667}
 ${RC_CSS}:root{--acc:${acc}}
 .chip{color:#fff;border-radius:4px;padding:1px 7px;font-size:8.5pt;margin-left:4px;white-space:nowrap}.pb{break-before:page;page-break-before:always}.dw img{max-width:100%;max-height:235mm;display:block;margin:auto;border:1px solid #ccd}.desc{white-space:pre-wrap}.sec td{background:${lt}!important;font-weight:bold;color:${acc}}
-</style></head><body><div class="cover"><div><div style="font-weight:bold;letter-spacing:.06em">${esc((o.subtitle||'').toUpperCase())}</div><h1>${esc(o.title)}</h1><div>${esc([p.client,p.address].filter(Boolean).join(' · '))}</div>${co.name?`<div class="co">Inspecting company: ${esc(co.name)}</div>`:''}</div>${logo||clogo?`<div class="lgs">${logo?`<div class="lg"><img src="${logo}" alt="${esc(co.name)}"></div>`:''}${clogo?`<div class="lg"><img src="${clogo}" alt=""></div>`:''}</div>`:''}</div>
+</style></head><body><div class="cover"><div><div style="font-weight:bold;letter-spacing:.06em">${esc((o.subtitle||'').toUpperCase())}</div><h1>${esc(o.title)}</h1><div>${esc([p.client,p.address].filter(Boolean).join(' · '))}</div>${co.name?`<div class="co">Inspecting company: ${esc(co.name)}</div>`:''}</div>${logo||clogo?`<div class="lgs">${logo?`<div class="lg"><img src="${logo}" alt="${esc(co.name)}"></div>`:''}${clogo?`<div class="lg"><img src="${clogo}" alt=""></div>`:''}</div>`:''}</div>${logo||co.name?`<div class="runhead">${logo?`<img src="${logo}" alt="">`:''}<b>${esc(co.name||'')}</b><span>${esc(o.title||p.name)}</span></div>`:''}
 <dl>${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="stats"><div><b>${all.length}</b>Total</div><div><b style="color:#dc2626">${cnt('Open')}</b>Open</div><div><b style="color:#d97706">${cnt('In Progress')}</b>In progress</div><div><b style="color:#16a34a">${cnt('Closed')}</b>Closed</div><div><b style="color:#9f1239">${all.filter(isOver).length}</b>Overdue</div></div>${tradeCounts(all).length?`<p style="font-size:9pt;color:#556"><b>Issues by trade:</b> ${tradeCounts(all).map(([t,n])=>esc(t)+' '+n).join(' · ')}</p>`:''}${[a?a.notes:'',p.notes].filter(Boolean).map(n=>`<p class="desc">${esc(n)}</p>`).join('')}`;
  if(o.charts!==false&&all.length)h+=`<h2 class="pb">Executive summary</h2>${svgExecSummary(all,{acc,progress:rcSpansDays(all,d.audits)})}`;
  const items=d.items;if(o.summary&&items.length)h+=`<h2 class="pb">Summary of issues</h2><table><tr><th>#</th><th>Issue</th><th>Location</th><th>Trade</th><th>Importance</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due</th></tr>${items.map(i=>`<tr><td><b>${a?'#'+i.number:issueRef(i)}</b></td><td>${esc(i.title)}</td><td>${esc(i.location)}</td><td>${esc(i.category)}${i.defectType?`<br><small>${esc(i.defectType)}</small>`:''}</td><td style="color:${PRIO_COLOR[i.priority]};font-weight:bold">${i.priority}</td><td>${phaseLabel(i.phase)||'–'}</td><td style="color:${STATUS_COLOR[i.status]};font-weight:bold">${i.status}</td><td>${esc(i.assignee)}</td><td ${isOver(i)?'style="color:#be123c;font-weight:bold"':''}>${fmtDate(i.dueDate)}</td></tr>`).join('')}</table>`;
@@ -1503,6 +1506,10 @@ const hjson=o=>JSON.stringify(o).replace(/[\u007f-\uffff]/g,c=>'\\u'+('000'+c.ch
 const dbxName=s=>String(s||'Untitled').replace(/[\\/:?*"<>|\u0000-\u001f]+/g,'-').replace(/\s+/g,' ').trim().slice(0,80)||'Untitled';
 const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
 const dataURLToBlob=async d=>(await fetch(d)).blob();
+/* fetch with a hard timeout: on iOS a request that is in flight when the app goes to the background can hang for ever, which used to
+ block every later sync (the phone then never saw newly shared projects until the app was killed). */
+async function fetchT(url,init={},ms=45000){ms=window.__dbxTimeout||ms;const c=typeof AbortController!=='undefined'?new AbortController():null;const t=c&&setTimeout(()=>c.abort(),ms);
+ try{return await fetch(url,c?{...init,signal:c.signal}:init)}catch(e){if(c&&c.signal.aborted)throw new DbxErr('Dropbox did not respond in time (network timeout)','offline');throw e}}
 const rootName=()=>DROPBOX_ROOT_FOLDER.replace(/\/+$/,'').split('/').pop();
 try{if(localStorage.getItem('sap.dbx.key')){localStorage.removeItem('sap.dbx.key');localStorage.removeItem('sap.dbx.tok');localStorage.removeItem('sap.dbx.loc')}}catch(e){}
 const Dbx={loc:null,
@@ -1534,7 +1541,7 @@ const Dbx={loc:null,
   if(teamIds().length&&!teamIds().includes(a.team.id))return`The Dropbox account ${a.email||''} belongs to a different team (“${a.team.name||a.team.id}”). Please sign in with your company Dropbox account.`;
   if(!domainOk(a.email))return`The Dropbox account ${a.email||''} is not a company account (allowed: ${domainsText()}). Please sign in with your company account (${domainsText()}).`;return null},
  async exchange(code,verifier,ru){const body=new URLSearchParams({code,grant_type:'authorization_code',code_verifier:verifier,client_id:this.key()});if(ru)body.set('redirect_uri',ru);
-  let r;try{r=await fetch(DBX_TOKEN,{method:'POST',body})}catch(e){throw new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
+  let r;try{r=await fetchT(DBX_TOKEN,{method:'POST',body})}catch(e){throw e instanceof DbxErr?e:new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.access_token)throw new DbxErr(j.error_description||j.error||('Token request failed ('+r.status+')'),'auth',r.status);
   this.setTok({v:2,access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+(j.expires_in||14400)*1000-60000,account_id:j.account_id,scope:j.scope||''});
   let a;try{a=await this.rpc('users/get_current_account')}catch(e){this.setTok(null);throw e}
@@ -1551,7 +1558,7 @@ const Dbx={loc:null,
   localStorage.setItem('sap.dbx.pkce',JSON.stringify({v,state,ru,t:Date.now(),from:from||null,grant:scope}));location.href=u.toString()},
  hasScope(s){const t=this.tok();return!!(t&&(' '+(t.scope||'')+' ').includes(' '+s+' '))},
  async exchangeGrant(code,verifier,ru,scope){const t=this.tok();if(!t)throw new DbxErr('Dropbox is not connected','auth');const body=new URLSearchParams({code,grant_type:'authorization_code',code_verifier:verifier,client_id:this.key()});if(ru)body.set('redirect_uri',ru);
-  let r;try{r=await fetch(DBX_TOKEN,{method:'POST',body})}catch(e){throw new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
+  let r;try{r=await fetchT(DBX_TOKEN,{method:'POST',body})}catch(e){throw e instanceof DbxErr?e:new DbxErr('Network unavailable','offline')}const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.access_token)throw new DbxErr(j.error_description||j.error||('Token request failed ('+r.status+')'),'auth',r.status);
   if(t.account_id&&j.account_id&&j.account_id!==t.account_id){try{await fetch(DBX_API+'auth/token/revoke',{method:'POST',headers:{Authorization:'Bearer '+j.access_token}})}catch(e){}throw new DbxErr('You signed in with a different Dropbox account. Use the same company account you connected with.','auth')}
   this.setTok({...t,access_token:j.access_token,refresh_token:j.refresh_token||t.refresh_token,expires_at:Date.now()+(j.expires_in||14400)*1000-60000,scope:j.scope||((t.scope?t.scope+' ':'')+scope)});toast('Dropbox permission granted ('+scope+')',3000)},
@@ -1569,21 +1576,36 @@ const Dbx={loc:null,
   for(const root of roots){try{const m=await this.rpc('files/get_metadata',{path:DROPBOX_ROOT_FOLDER},{root});if(m['.tag']==='folder')return set(root,m.path_display,root?'team space':'home')}catch(e){if(!ok(e))throw e}}
   for(const root of roots){try{const r=await this.rpc('files/search_v2',{query:rootName(),options:{file_categories:[{'.tag':'folder'}],max_results:50}},{root});
     const ms=(r.matches||[]).map(x=>x.metadata&&x.metadata.metadata).filter(m=>m&&m['.tag']==='folder'&&m.name.toLowerCase()===rootName().toLowerCase()).sort((x,y)=>x.path_display.length-y.path_display.length);
-    if(ms[0])return set(root,ms[0].path_display,'search')}catch(e){if(!ok(e)&&e.kind!=='api')throw e}}
+    /* every project folder has a data subfolder with the same name ("Site Inspection") – never use one of those as the company folder */
+    let pick=null;for(const m of ms.slice(0,12)){const k=await this.folderKind(m.path_display,root);if(k==='company'){pick=m;break}if(k==='plain'&&!pick)pick=m}
+    if(pick)return set(root,pick.path_display,'search')}catch(e){if(!ok(e)&&e.kind!=='api')throw e}}
   if(teamSpace){try{const r=await this.rpc('files/create_folder_v2',{path:DROPBOX_ROOT_FOLDER,autorename:false},{root:String(ri.root_namespace_id)});toast('Created the shared company folder “'+DROPBOX_ROOT_FOLDER+'”. Share it with your staff in Dropbox.',5000);return set(String(ri.root_namespace_id),r.metadata.path_display,'created')}catch(e){if(e.kind==='offline')throw e}}
   this.loc=null;localStorage.removeItem('sap.dbx.loc');throw new DbxErr(NOACCESS_MSG,'noaccess')},
+ /* 'company' = has _registry or data (the app's company folder), 'project' = a project's data subfolder (_siteinspection), else 'plain' */
+ async folderKind(path,root){const has=async n=>{try{const m=await this.rpc('files/get_metadata',{path:path+'/'+n},{root});return m['.tag']==='folder'}catch(e){if(['notfound','noaccess'].includes(e.kind))return false;throw e}};
+  if(await has('_siteinspection'))return'project';if(await has('_registry')||await has('data'))return'company';return'plain'},
  async ensureFolder(){if(!this.loc){try{this.loc=JSON.parse(localStorage.getItem('sap.dbx.loc')||'null')}catch(e){}}
-  if(this.loc){try{const m=await this.rpc('files/get_metadata',{path:this.loc.folder},{root:this.loc.root});if(m['.tag']==='folder')return this.loc}catch(e){if(!['notfound','noaccess'].includes(e.kind))throw e}}
-  return this.resolveFolder()},
+  const prev=this.loc&&{root:this.loc.root,folder:this.loc.folder};let loc=null;
+  const force=this._reloc;this._reloc=false;
+  if(this.loc&&!force){try{const m=await this.rpc('files/get_metadata',{path:this.loc.folder},{root:this.loc.root});if(m['.tag']==='folder')loc=this.loc}catch(e){if(!['notfound','noaccess'].includes(e.kind))throw e}}
+  /* a folder found by search (older versions could pick a project's "Site Inspection" data subfolder) is re-checked at least daily */
+  if(loc&&loc.how==='search'&&(!loc.verifiedAt||Date.now()-loc.verifiedAt>864e5)){const old=loc;
+   if(await this.folderKind(old.folder,old.root)==='project')loc=null;
+   else{try{loc=await this.resolveFolder()}catch(e){if(e.kind!=='noaccess')throw e;loc=old}loc.verifiedAt=Date.now();this.loc=loc;localStorage.setItem('sap.dbx.loc',JSON.stringify(loc))}}
+  if(!loc)loc=await this.resolveFolder();
+  if(prev&&(prev.folder!==loc.folder||String(prev.root)!==String(loc.root)))this.locChanged(prev,loc);return loc},
+ /* company folder changed (e.g. a wrong cached folder was corrected): forget cursors / revisions that belong to the old folder */
+ locChanged(prev,loc){console.warn('Company folder changed',prev,'→',loc.folder);Sync.locNote={at:Date.now(),from:prev.folder,to:loc.folder};if(typeof SM!=='undefined'&&SM){SM.cursor=null;for(const k of Object.keys(SM.revs||{}))if(!k.startsWith('L:'))delete SM.revs[k];SM.regRev={};SM.regHash={};Sync.saveMeta();if(Sync.markAllDirty)Sync.markAllDirty()}
+  if(typeof REG!=='undefined')REG.clear()},
  async token(force){let t=this.tok();if(!t)throw new DbxErr('Dropbox not connected','auth');if(!force&&t.access_token&&Date.now()<t.expires_at)return t.access_token;
   if(!t.refresh_token)throw new DbxErr('Dropbox session expired – please reconnect','auth');
-  if(!this._ref)this._ref=(async()=>{let r;try{r=await fetch(DBX_TOKEN,{method:'POST',body:new URLSearchParams({grant_type:'refresh_token',refresh_token:t.refresh_token,client_id:this.key()})})}catch(e){throw new DbxErr('Network unavailable','offline')}
+  if(!this._ref)this._ref=(async()=>{let r;try{r=await fetchT(DBX_TOKEN,{method:'POST',body:new URLSearchParams({grant_type:'refresh_token',refresh_token:t.refresh_token,client_id:this.key()})})}catch(e){throw e instanceof DbxErr?e:new DbxErr('Network unavailable','offline')}
    const j=await r.json().catch(()=>({}));if(!r.ok||!j.access_token)throw new DbxErr(j.error_description||'Dropbox access was revoked – please reconnect','auth',r.status);
    t={...this.tok(),access_token:j.access_token,expires_at:Date.now()+(j.expires_in||14400)*1000-60000};this.setTok(t);return t.access_token})().finally(()=>{this._ref=null});
   return this._ref},
  rootHeader(opt){const root=opt&&opt.root!==undefined?opt.root:(this.loc&&this.loc.root);return root?{'Dropbox-API-Path-Root':hjson({'.tag':'root',root:String(root)})}:{}},
  async call(url,init,attempt=0){if(!navigator.onLine)throw new DbxErr('You are offline','offline');const tk=await this.token(!!init._force);const h={...(init.headers||{}),Authorization:'Bearer '+tk};let r;
-  try{r=await fetch(url,{method:'POST',headers:h,body:init.body})}catch(e){throw new DbxErr('Network unavailable','offline')}
+  try{r=await fetchT(url,{method:'POST',headers:h,body:init.body},/^https:\/\/content\./.test(url)?180000:45000)}catch(e){throw e instanceof DbxErr?e:new DbxErr('Network unavailable','offline')}
   if(r.status===401&&attempt<2){const t=this.tok();if(t){t.expires_at=0;this.setTok(t)}return this.call(url,{...init,_force:true},attempt+1)}
   if((r.status===429||r.status===503)&&attempt<6){let ra=parseFloat(r.headers.get('Retry-After'));if(!ra){try{const j=await r.clone().json();ra=j.error&&j.error.retry_after}catch(e){}}Sync.setState('syncing','Rate limited – retrying');await sleep(1000*Math.min(60,ra||2**attempt));return this.call(url,init,attempt+1)}
   if(r.status>=500&&attempt<3){await sleep(1000*2**attempt);return this.call(url,init,attempt+1)}
@@ -1653,12 +1675,14 @@ const Sync={state:'idle',msg:'',
   const ago=SM&&SM.lastSync?timeAgo(SM.lastSync):'never';const txt={syncing:this.msg||'Syncing…',ok:'Synced '+ago,idle:n?`${n} change${n>1?'s':''} to sync`:'Dropbox',offline:`Offline${n?' · '+n+' pending':''}`,error:'Sync error – tap to retry',auth:'Reconnect Dropbox',noaccess:'No folder access'}[this.state]||'Dropbox';
   el.className='sync-pill s-'+this.state;el.title=(this.msg||txt)+(SM&&SM.lastSync?' · Last sync '+fmtDT(SM.lastSync):'');el.querySelector('span').textContent=txt;
   const st=$('#dbx-status');if(st)st.textContent=`${txt}${this.state==='error'&&this.msg?' ('+this.msg+')':''} · Last sync: ${SM&&SM.lastSync?fmtDT(SM.lastSync):'never'}`},
- now(manual){if(!Dbx.connected())return Promise.resolve();if(this._p){this._again=true;return this._p}
-  this._p=(async()=>{do{this._again=false;await this.run(manual)}while(this._again)})().finally(()=>{this._p=null});return this._p},
+ now(manual){if(!Dbx.connected())return Promise.resolve();if(this._p&&Date.now()-(this._pAt||0)<300000){this._again=true;return this._p}
+  /* watchdog: a sync running for more than 5 min is treated as stuck (e.g. iOS froze a request in the background) and replaced */
+  if(this._p){console.warn('Sync appeared stuck – restarting');this.lastErr={at:Date.now(),msg:'Previous sync was stuck for more than 5 minutes and was restarted'}}
+  const g=this._gen=(this._gen||0)+1;this._pAt=Date.now();this._p=(async()=>{do{this._again=false;await this.run(manual)}while(this._again&&this._gen===g)})().finally(()=>{if(this._gen===g)this._p=null});return this._p},
  async run(manual){if(!navigator.onLine){this.setState('offline');return}this.setState('syncing');
-  try{await Dbx.ensureFolder();this._runLoc=new Map();let changed=await this.pull();if(await this.regRead())changed=true;if(await this.linkedPull())changed=true;if(await fixAllNumbers())changed=true;await this.push();await this.regWrite();if(await this.coSync())changed=true;await this.flushPdfQueue();await this.photos();await this.linkedPhotos();
+  try{await Dbx.ensureFolder();this._runLoc=new Map();let changed=await this.pull();try{if(await this.coSync())changed=true}catch(e){if(['offline','auth'].includes(e.kind))throw e;console.warn('Companies sync failed',e.message)}if(await this.regRead())changed=true;if(await this.linkedPull())changed=true;if(await fixAllNumbers())changed=true;await this.push();await this.regWrite();if(await this.coSync())changed=true;await this.flushPdfQueue();await this.photos();await this.linkedPhotos();
    SM.lastSync=Date.now();await DB.put('meta',SM);this.setState('ok');if(changed)safeRender();if(manual)toast('Dropbox sync complete',1400)}
-  catch(e){console.warn('Sync failed:',e);await DB.put('meta',SM).catch(()=>{});
+  catch(e){console.warn('Sync failed:',e);this.lastErr={at:Date.now(),msg:e.message||String(e),kind:e.kind||'',stack:String(e.stack||'').slice(0,600)};await DB.put('meta',SM).catch(()=>{});
    if(e.kind==='offline'){this.setState('offline')}else if(e.kind==='noaccess'){this.setState('noaccess',e.message);if(manual)alertBox(e.message,'Company folder')}else if(e.kind==='auth'){this.setState('auth',e.message);if(manual)alertBox(e.message)}
    else{this.setState('error',e.message);clearTimeout(this._rt);this._rt=setTimeout(()=>this.now(),60000);if(manual)alertBox('Dropbox sync failed: '+e.message)}}},
  keyOfPath(p){const F=Dbx.loc.folder;if(p.toLowerCase().indexOf(F.toLowerCase()+'/')!==0)return null;p=p.slice(F.length);const m=/^\/data\/(settings|templates)\.json$/i.exec(p);if(m)return m[1].toLowerCase();const n=/^\/data\/projects\/([^/]+)\.json$/i.exec(p);return n?'projects/'+n[1]:null},
@@ -1705,7 +1729,7 @@ const Sync={state:'idle',msg:'',
  async pushTo(key,T){const{path,opt,revKey}=T;
   for(let a=0;;a++){if(a)await sleep(150+Math.random()*400*a);const body=new Blob([JSON.stringify(this.build(key))],{type:'application/json'});const rev=SM.revs[revKey];
    try{const m=await Dbx.upload(path,body,rev?{'.tag':'update',update:rev}:{'.tag':'add'},opt);SM.revs[revKey]=m.rev;break}
-   catch(e){if(e.kind!=='conflict'||a>=8)throw e;let got;try{got=await Dbx.download(path,opt)}catch(x){if(x.kind==='notfound'){delete SM.revs[revKey];continue}throw x}const b=JSON.parse(await got.blob.text());if(await this.apply(key,b))safeRender();SM.revs[revKey]=got.meta&&got.meta.rev?got.meta.rev:(await Dbx.rpc('files/get_metadata',{path},opt)).rev}}},
+   catch(e){if(e.kind!=='conflict'||a>=8)throw e;let got;try{got=await Dbx.download(path,opt)}catch(x){if(x.kind==='notfound'){delete SM.revs[revKey];continue}throw x}const txt=await got.blob.text();let b=null;try{b=JSON.parse(txt)}catch(x){if(txt.trim())throw new Error('Unreadable sync file '+path+' ('+x.message+')');console.warn('Empty sync file – replacing it',path)}if(b&&await this.apply(key,b))safeRender();SM.revs[revKey]=got.meta&&got.meta.rev?got.meta.rev:(await Dbx.rpc('files/get_metadata',{path},opt)).rev}}},
  async photos(){const remote=new Map();for(const dir of['/photos','/drawings'])for(const e of(await Dbx.listAll(Dbx.p(dir))).entries)if(e['.tag']==='file')remote.set(e.name.toLowerCase(),{...e,dir});
   for(const q of SM.remoteDel.slice()){const leg=typeof q==='string';if(!leg&&!q.g)continue; /* legacy queue entries ('/photos/<id>.jpg') are handled the same way */
    const names=leg?(/^\/photos\/[^/]+$/.test(q)?[q.slice(8)]:[]):q.drawing?[]:[q.id+'.jpg',q.id+'.orig.jpg',q.id+'.json'];
@@ -2466,7 +2490,8 @@ Object.assign(Sync,{proj:{},_pl:{},
   for(const c of(SM.regDel||[]).slice()){const path=this.regPath(c);try{const cur=JSON.parse(await(await Dbx.download(path)).blob.text());
     if(cur&&cur.id&&!cur.deleted&&!byId('projects',cur.id))await Dbx.upload(path,new Blob([JSON.stringify(this.regTombBody({id:cur.id,code:c,at:Date.now(),by:myEmail()},cur))],{type:'application/json'}),{'.tag':'overwrite'})}
    catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind!=='notfound')console.warn('Registry tombstone',e.message)}SM.regDel.splice(SM.regDel.indexOf(c),1);this.saveMeta()}},
- async regRead(){SM.regRev=SM.regRev||{};let es;try{es=(await Dbx.listAll(Dbx.p('/_registry/projects'))).entries.filter(e=>e['.tag']==='file'&&/\.json$/i.test(e.name))}catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind!=='notfound'){console.warn('Registry read failed',e.message);return false}es=[]}
+ async regRead(){SM.regRev=SM.regRev||{};let es;try{es=(await Dbx.listAll(Dbx.p('/_registry/projects'))).entries.filter(e=>e['.tag']==='file'&&/\.json$/i.test(e.name))}catch(e){this.regStat={at:Date.now(),err:e.message||String(e)};if(['offline','auth'].includes(e.kind))throw e;if(e.kind!=='notfound'){console.warn('Registry read failed',e.message);return false}es=[]}
+  this.regStat={at:Date.now(),n:es.length,path:Dbx.p('/_registry/projects')};
   const seen=new Set(es.map(e=>e.path_lower));for(const k of[...REG.keys()])if(!seen.has(k)){REG.delete(k);await DB.del('meta','reg:'+k);delete SM.regRev[k]} // entry gone from Dropbox → drop the cached copy (stale 'Project exists')
   let changed=false;for(const e of es){let r=REG.get(e.path_lower);if(!r||SM.regRev[e.path_lower]!==e.rev){try{const{blob}=await Dbx.download(e.path_lower);r=JSON.parse(await blob.text())}catch(x){if(['offline','auth'].includes(x.kind))throw x;continue}
     if(!r||r.format!=='sap-registry-1'||!r.id)continue;REG.set(e.path_lower,r);await DB.put('meta',{id:'reg:'+e.path_lower,reg:r});SM.regRev[e.path_lower]=e.rev;this.saveMeta()}
@@ -2602,7 +2627,7 @@ function conCsvBlob(items,p){const cols=['Project code','Project','Inspection','
  const q=v=>{v=String(v??'');return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};const iso=t=>t?new Date(t).toISOString():'';
  const rows=items.map(i=>{const a=byId('audits',i.auditId),f=i.flag||{},m=(p.team||[]).find(x=>eqEmail(x.email,i.createdByEmail));return[p.code||'',p.name,a&&a.title,i.number,issueRef(i),i.title,i.description,i.location,i.category,i.subcategory,i.defectType,i.priority,phaseLabel(i.phase),i.status,i.createdBy||'',i.createdByEmail||'',i.raisedDesig||(m?m.designation:''),f.status||'',f.byName||f.byEmail||'',f.fromTrade||'',f.toTrade||'',f.toName||'',f.note||'',iso(f.at),f.returnNote||'',i.assignee,i.dueDate,isOver(i)?'Yes':'No',(i.photos||[]).length,iso(i.createdAt),iso(i.updatedAt),iso(i.closedAt),(i.photos||[]).map((x,k)=>photoName(i,k,true)).join('; '),coName(p)]});
  return new Blob(['\ufeff'+[cols,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})}
-async function conPDF(d,o,opt={}){const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});window.__lastStrips=[];window.__lastChartBoxes=[];window.__lastCharts=[];const acc=hex2rgb(o.color||THEMES.Blue),light=mix(acc,.88),M=14,p=d.project;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
+async function conPDF(d,o,opt={}){await coFresh();const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});window.__lastStrips=[];window.__lastChartBoxes=[];window.__lastCharts=[];const acc=hex2rgb(o.color||THEMES.Blue),light=mix(acc,.88),M=14,p=d.project;let PW=210,PH=297,y=M;const DARK=[30,36,48],GREY=[110,120,135];
  const T=(t,x,yy,op)=>doc.text(Array.isArray(t)?t:String(t??''),x,yy,op);const font=(sz,st='normal',col=DARK)=>{doc.setFont('helvetica',st);doc.setFontSize(sz);doc.setTextColor(...col)};
  const newPage=()=>{doc.addPage('a4','portrait');y=M+4};const ensure=h=>{if(y+h>PH-16){newPage();return true}return false};
  const heading=t=>{ensure(18);font(15,'bold',acc);T(t,M,y+5);doc.setDrawColor(...acc);doc.setLineWidth(.6);doc.line(M,y+8,PW-M,y+8);y+=15};
@@ -2709,9 +2734,11 @@ async function coSeed(){S.companies=S.companies||[];for(const c of[CO_SHARED_SEE
 const coShared=()=>byId('companies',CO_SHARED)||CO_SHARED_SEED;
 const coList=()=>S.companies.filter(c=>!c.shared&&!c.deleted).sort((a,b)=>(a.ord||99)-(b.ord||99)||a.name.localeCompare(b.name));
 function coOf(p){if(typeof p==='string')p=byId('projects',p);return(p&&p.companyId&&byId('companies',p.companyId))||byId('companies',CO_DEFAULT)||coList()[0]||null}
+/* a company record without a logo uses the logo of another record with the same name (duplicates created on different devices) */
+const coNamesakeLogo=c=>{const n=String(c.name||'').trim().toLowerCase();if(!n)return'';const o=(S.companies||[]).find(x=>x!==c&&x.logo&&String(x.name||'').trim().toLowerCase()===n);return o?o.logo:''};
 /* Effective details: company values, else the shared address. Without any company record: the old Settings company. */
 function coInfo(c){if(!c)return{name:S.settings.company||'',logo:S.settings.logo||'',website:'',footer:'',lines:String(S.settings.companyDetails||'').split('\n').filter(Boolean)};
- const sh=coShared(),v=k=>String(c[k]||'').trim()||String(sh[k]||'').trim();const o={id:c.id,color:/^#[0-9a-f]{6}$/i.test(c.color||'')?c.color:'',name:c.name||'',logo:c.logo||(c.id===CO_DEFAULT&&S.settings.logo)||'',website:String(c.website||'').trim(),footer:String(c.footer||'').trim()};CO_ADDR.forEach(([k])=>o[k]=v(k));
+ const sh=coShared(),v=k=>String(c[k]||'').trim()||String(sh[k]||'').trim();const o={id:c.id,color:/^#[0-9a-f]{6}$/i.test(c.color||'')?c.color:'',name:c.name||'',logo:c.logo||(c.id===CO_DEFAULT&&S.settings.logo)||coNamesakeLogo(c)||'',website:String(c.website||'').trim(),footer:String(c.footer||'').trim()};CO_ADDR.forEach(([k])=>o[k]=v(k));
  o.lines=[...o.address.split('\n').map(x=>x.trim()).filter(Boolean),o.poBox&&'PO Box '+o.poBox,o.phone&&'T '+o.phone,o.mobile&&'M '+o.mobile,o.email,o.website].filter(Boolean);return o}
 const coLine=co=>co.lines.join(' | ');
 const themeOpts=p=>{const co=coInfo(coOf(p)),cur=co.color||S.settings.reportColor||THEMES.Blue;return(co.color?`<option value="${co.color}" selected>${esc(co.name||'Company')} brand colour</option>`:'')+Object.entries(THEMES).map(([k,v])=>`<option value="${v}" ${!co.color&&v===cur?'selected':''}>${k}</option>`).join('')};
@@ -2753,12 +2780,21 @@ Object.assign(Sync,{
   if(m&&m.rev!==SM.coRev){try{const{blob,meta}=await Dbx.download(m.path_lower||this.coPath());const b=JSON.parse(await blob.text());if(b&&b.format==='sap-companies-1'&&Array.isArray(b.companies)){
     for(const r of b.companies){if(!r||!r.id)continue;const loc=byId('companies',r.id);if(!loc||(r.updatedAt||0)>(loc.updatedAt||0)){await DB.put('companies',r);const i=S.companies.findIndex(x=>x.id===r.id);if(i>=0)S.companies[i]=r;else S.companies.push(r);changed=true}}
     SM.coRev=(meta&&meta.rev)||m.rev;SM.coHash=this.coHashOf(b.companies);this.saveMeta()}}catch(e){if(['offline','auth'].includes(e.kind))throw e;console.warn('Companies read failed',e.message);return changed}}
+  this._coAt=Date.now();
   const h=this.coHashOf(S.companies);if(h===SM.coHash)return changed;
   try{const up=await Dbx.upload(this.coPath(),new Blob([JSON.stringify({format:'sap-companies-1',savedAt:new Date().toISOString(),companies:JSON.parse(h)})],{type:'application/json'}),m?{'.tag':'update',update:m.rev}:{'.tag':'add'});SM.coRev=up.rev;SM.coHash=h;this.saveMeta()}
   catch(e){if(['offline','auth'].includes(e.kind))throw e;if(e.kind==='conflict'){SM.coRev=null;this._again=true}else console.warn('Companies write failed',e.message)}return changed}});
 
 /* ---- report branding (PDF cover logos, page header, footer) ---- */
-async function pdfLogo(doc,data,x,y,bw,bh,alias,left){const s=await imgSize(data);const sc=Math.min(bw/s.w,bh/s.h);const w=s.w*sc,h=s.h*sc;doc.addImage(data,imgFmt(data),left?x:x+(bw-w)/2,y+(bh-h)/2,w,h,alias,'FAST');return w}
+/* logos: whatever format was stored (PNG, JPEG, SVG without a size, WebP, GIF…) is turned into something jsPDF can embed, once per logo */
+const LOGO_PNG=new Map();
+async function logoPng(src){if(!src)return'';if(LOGO_PNG.has(src))return LOGO_PNG.get(src);let out=src;
+ try{const i=await loadImg(src);let w=i.naturalWidth,h=i.naturalHeight;if(!/^data:image\/(png|jpe?g)[;,]/i.test(src)||!w||!h){if(!w||!h){w=600;h=240}const s=Math.min(1,1200/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));c.getContext('2d').drawImage(i,0,0,c.width,c.height);out=c.toDataURL('image/png')}}
+ catch(e){console.warn('Logo could not be loaded:',e.message);out=''}LOGO_PNG.set(src,out);return out}
+/* fresh company records (logos) before a report: a device whose last sync stopped early may not have pulled companies.json yet */
+async function coFresh(){if(typeof Dbx==='undefined'||!Dbx.connected()||!navigator.onLine||Date.now()-(Sync._coAt||0)<120000)return;
+ try{await Promise.race([Sync.coSync(),new Promise(r=>setTimeout(r,8000))])}catch(e){console.warn('Company refresh before report failed',e.message)}}
+async function pdfLogo(doc,data,x,y,bw,bh,alias,left){data=await logoPng(data);if(!data)throw new Error('logo not readable');const s=await imgSize(data);const sc=Math.min(bw/s.w,bh/s.h);const w=s.w*sc,h=s.h*sc;doc.addImage(data,imgFmt(data),left?x:x+(bw-w)/2,y+(bh-h)/2,w,h,alias,'FAST');return w}
 /* cover band: company logo (white box) top right, project / client logo under it. Returns the width reserved on the right. */
 async function pdfCoverLogos(doc,co,p,PW,M){const L=co.logo,C=p.logo&&p.logo!==L?p.logo:'';if(!L&&!C)return 0;doc.setFillColor(255,255,255);
  if(L){doc.roundedRect(PW-M-44,12,44,30,2,2,'F');await pdfLogo(doc,L,PW-M-41,14,38,26,'co-logo')}
@@ -2999,6 +3035,60 @@ async function pdfCover(doc,{co,p,acc,M,font,T,kicker,title,lines,when,all}){con
  for(const[l,b]of lines){font(b?10:11,b?'bold':'normal',W);T(rcFit(l,PW-2*M,b?10:11,!!b),M,y);y+=5.6}font(8.5,'normal',mix(acc,.6));T(rcFit(when,PW-2*M,8.5),M,y0+bandH-5);
  y=y0+bandH+7;const K=rcKeyNums(all),gap=3,bw=(PW-2*M-gap*5)/6;K.forEach(([l,n,c],k)=>{const x=M+k*(bw+gap);doc.setFillColor(...(c?[246,248,251]:acc));doc.setDrawColor(...(c?[222,228,234]:acc));doc.setLineWidth(.3);doc.roundedRect(x,y,bw,21,2,2,'FD');
   font(17,'bold',c?hex2rgb(c):W);T(String(n),x+bw/2,y+11,{align:'center'});font(6.8,'bold',c?[110,120,135]:mix(acc,.75));T(l.toUpperCase(),x+bw/2,y+17,{align:'center'})});return y+28}
+
+/* ===== About & diagnostics (Settings) + update check =====
+ Visible to every user. Shows what the support person needs when a device does not see shared projects: app version (running / on the
+ server), standalone (home-screen) vs browser tab, signed-in Dropbox account, team / root namespace, company folder + reachability,
+ registry entries and which of them match this user (and why a matching one is not listed), last sync / last error. Read-only: it never
+ writes or deletes anything in Dropbox. "Copy diagnostics" copies the plain-text report. */
+const APP_VER={boot:'',latest:'',cache:'',checkedAt:0};
+async function swVersion(){try{const r=await fetch('sw.js?v='+Date.now(),{cache:'no-store'});if(!r.ok)return'';const m=/sap-([0-9a-f]{6,})/.exec(await r.text());return m?'sap-'+m[1]:''}catch(e){return''}}
+async function cacheVersion(){try{if(!window.caches)return'';const ks=(await caches.keys()).filter(k=>/^sap-/.test(k));return ks.join(', ')}catch(e){return''}}
+const isStandalone=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+async function checkUpdate(){if(!window.__PWA||location.protocol==='file:')return;const v=await swVersion();if(!v)return;APP_VER.latest=v;APP_VER.checkedAt=Date.now();if(!APP_VER.boot){APP_VER.boot=v;return}
+ if(v!==APP_VER.boot&&!document.getElementById('upd-bar')){const d=document.createElement('div');d.id='upd-bar';d.className='upd-bar';d.innerHTML=`<span>A new version of the app is available.</span><button class="btn sm primary" data-act="app-reload">Reload</button>`;document.body.appendChild(d)}}
+/* why a registry entry that names this user is (not) listed on this device – mirrors regAdopt() */
+function regWhy(r){const me=myEmail();if(!r||!r.id)return'invalid entry';if(r.deleted)return'deleted project';const p=byId('projects',r.id);
+ const onTeam=eqEmail(r.ownerEmail,me)||(r.team||[]).some(m=>eqEmail(m.email,me));if(!onTeam)return null;
+ if(p)return p.stub?'listed (waiting for the project folder to sync)':'listed';
+ if(SM&&SM.forgot&&SM.forgot[r.id]&&(r.updatedAt||0)<=SM.forgot[r.id])return'HIDDEN – removed from this device (Remove from this device)';
+ const t=TOMBS.get('projects:'+r.id);if(t&&t.deletedAt>=(r.updatedAt||0))return'HIDDEN – a deletion of this project is recorded on this device';
+ const clash=S.projects.find(x=>x.code&&pfCodeKey(x.code)===pfCodeKey(r.code));if(clash)return`HIDDEN – another local project uses the same code (“${clash.name}”)`;
+ return'not listed yet – will be added on the next sync'}
+async function diagCollect(){const L=[],t=Dbx.tok&&Dbx.tok(),acc=(t&&t.account)||{},loc=Dbx.loc||(()=>{try{return JSON.parse(localStorage.getItem('sap.dbx.loc')||'null')}catch(e){return null}})();
+ const ver=await swVersion();if(ver)APP_VER.latest=ver;const cv=await cacheVersion();
+ L.push('Site Inspection diagnostics – '+fmtDT(Date.now()));
+ L.push(`App version: running ${APP_VER.boot||'?'} · on server ${APP_VER.latest||'?'} · offline cache ${cv||'–'}${APP_VER.boot&&APP_VER.latest&&APP_VER.boot!==APP_VER.latest?'  ⚠ UPDATE AVAILABLE – close the app completely and reopen it':''}`);
+ L.push(`Opened as: ${isStandalone()?'home-screen app (standalone)':'browser tab'} · ${navigator.userAgent}`);
+ L.push(`Dropbox: ${Dbx.connected&&Dbx.connected()?'connected':'NOT connected'}${acc.email?' as '+acc.email:''}${t&&t.account_id?' · account '+t.account_id:''}${acc.team&&acc.team.name?' · team '+acc.team.name+(acc.team.id?' ('+acc.team.id+')':''):' · no team'}`);
+ L.push(`Allowed company domains: ${allowedDomains().join(', ')||'any'} · this account ${acc.email?(domainOk(acc.email)?'OK':'NOT a company account'):'?'}`);
+ if(loc)L.push(`Dropbox root: ${loc.teamSpace?'team space':'personal/home'} · root namespace ${loc.rootNs||'–'} · home namespace ${loc.homeNs||'–'}${loc.homePath?' ('+loc.homePath+')':''}`);
+ L.push(`Company folder: ${loc?loc.folder+' (found by '+(loc.how||'?')+(loc.root?', path root '+loc.root:'')+')':'not resolved'} · build folder ${DROPBOX_ROOT_FOLDER}`);
+ if(Dbx.connected&&Dbx.connected()&&navigator.onLine){try{const m=await Dbx.rpc('files/get_metadata',{path:DROPBOX_ROOT_FOLDER},{root:loc&&loc.rootNs?String(loc.rootNs):null});L.push(`${DROPBOX_ROOT_FOLDER} at the team root: reachable (${m['.tag']})`)}catch(e){L.push(`${DROPBOX_ROOT_FOLDER} at the team root: NOT reachable (${e.kind||''}: ${e.message})`)}
+  if(loc){try{const k=await Dbx.folderKind(loc.folder,loc.root);L.push(`Company folder check: ${k==='company'?'OK (has _registry / data)':k==='project'?'WRONG – this is a project data folder':'reachable, no app data yet'}`)}catch(e){L.push('Company folder check failed: '+e.message)}
+   try{const r=await Dbx.listAll(Dbx.p('/_registry/projects'));L.push(`Registry on Dropbox now: ${r.entries.filter(e=>e['.tag']==='file'&&/\.json$/i.test(e.name)).length} entries`)}catch(e){L.push(`Registry on Dropbox now: NOT readable (${e.kind||''}: ${e.message})`)}}}
+ const rs=Sync.regStat;L.push(`Registry at last sync: ${rs?(rs.err?'ERROR '+rs.err:rs.n+' entries')+' · '+fmtDT(rs.at):'not read yet'} · cached on this device: ${REG.size}`);
+ const mine=[...REG.values()].map(r=>[r,regWhy(r)]).filter(x=>x[1]);L.push(`Projects in the registry for ${myEmail()||'?'}: ${mine.filter(x=>x[1]!=='deleted project').length}`);
+ for(const[r,w]of mine)L.push(`  · ${r.code||'?'} ${r.name||''}: ${w}`);
+ L.push('Companies (report logos): '+(coList().map(c=>{const lg=coInfo(c).logo;return`${c.name}: ${lg?'logo ✓ '+Math.max(1,Math.round(lg.length*.75/1024))+' KB':'NO logo – upload it in Settings › Companies'}`}).join(' · ')||'none')+(Sync._coAt?' · company list refreshed '+fmtDT(Sync._coAt):' · company list not refreshed from Dropbox yet'));
+ const ps=S.projects;L.push(`Projects on this device: ${ps.length} (${ps.filter(p=>p.stub).length} waiting to sync, ${ps.filter(p=>pfLinked(p)).length} with project folder)`);
+ for(const p of ps.filter(p=>pfLinked(p)).slice(0,30)){const st=Sync.proj&&Sync.proj[p.id];L.push(`  · ${p.code||p.name}: ${st?st.state+(st.msg?' – '+st.msg:''):'not synced yet'}`)}
+ L.push(`Sync: ${Sync.state}${Sync.msg?' – '+Sync.msg:''} · last success ${SM&&SM.lastSync?fmtDT(SM.lastSync):'never'}${Sync._p?' · running since '+fmtDT(Sync._pAt||Date.now()):''}`);
+ L.push(`Last sync error: ${Sync.lastErr?fmtDT(Sync.lastErr.at)+' – '+Sync.lastErr.msg+(SM&&SM.lastSync>Sync.lastErr.at?' (synced OK since then)':''):'none'}`);if(Sync.locNote)L.push(`Company folder corrected: ${Sync.locNote.from} → ${Sync.locNote.to} (${fmtDT(Sync.locNote.at)})`);
+ try{if(navigator.storage&&navigator.storage.persisted)L.push(`Storage: ${await navigator.storage.persisted()?'persistent':'may be cleared by the browser (not persistent)'}`)}catch(e){}
+ return L.join('\n')}
+function diagHTML(){return`<div class="card pad" style="margin-top:16px" id="diag-card"><h2 style="margin-top:0;font-size:17px">About & diagnostics</h2>
+ <p class="muted small">If projects shared with you are missing on this device, tap <b>Run diagnostics</b> and send the result to your administrator (<b>Copy diagnostics</b>).</p>
+ <div class="actions"><button class="btn primary" data-act="diag-run">${ic('list')} Run diagnostics</button><button class="btn" data-act="diag-copy">Copy diagnostics</button>${Dbx.connected&&Dbx.connected()?`<button class="btn" data-act="diag-relocate">Re-check company folder & sync</button>`:''}</div>
+ <pre class="diag" id="diag-out">App version: ${esc(APP_VER.boot||'…')} · ${isStandalone()?'home-screen app':'browser tab'}${Dbx.connected&&Dbx.connected()&&Dbx.tok().account?' · '+esc(Dbx.tok().account.email||''):''}</pre></div>`}
+async function diagRun(){const o=$('#diag-out');if(o)o.textContent='Running diagnostics…';let txt;try{txt=await diagCollect()}catch(e){txt='Diagnostics failed: '+e.message}window.__diag=txt;const o2=$('#diag-out');if(o2)o2.textContent=txt;return txt}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const ta=document.createElement('textarea');ta.value=t;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}ta.remove();return ok}}
+Object.assign(ACT,{'diag-run':()=>diagRun(),
+ 'diag-copy':async()=>{const t=window.__diag||await diagRun();toast(await copyText(t)?'Diagnostics copied – paste them into an e-mail or WhatsApp':'Could not copy – select the text and copy it manually',3000)},
+ 'diag-relocate':async()=>{const done=busy('Checking the company folder…');try{Dbx._reloc=true;await Sync.now(true);await diagRun()}catch(e){alertBox(e.message)}finally{done()}},
+ 'app-reload':async()=>{try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)await r.update()}catch(e){}location.reload()}});
+/* version at start-up + re-check whenever the app comes back to the foreground (iOS keeps home-screen apps in memory for days) */
+setTimeout(checkUpdate,1500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-APP_VER.checkedAt>60000)checkUpdate()});
 
 </script>
 </body>
