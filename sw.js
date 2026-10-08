@@ -1,5 +1,5 @@
 /* Site Inspection service worker – offline app shell. Dropbox API calls are never cached. */
-const CACHE='sap-5396574253';const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./heic/heic-worker.js','./heic/libheif.js','./heic/libheif.wasm']; // heic/: HEIC→JPEG converter, used offline too
+const CACHE='sap-8af06de29a';const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./heic/heic-worker.js','./heic/libheif.js','./heic/libheif.wasm']; // heic/: HEIC→JPEG converter, used offline too
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('sap-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{const req=e.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==location.origin)return;
