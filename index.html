@@ -335,6 +335,8 @@ body.wl-mode .topnav{display:none}
 .lgchk details{margin-top:6px}.lgchk summary{cursor:pointer;color:#475569;font-size:12px}
 .lgtab{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}.lgtab th{text-align:left;color:#64748b;font-weight:600;padding:3px 8px 3px 0;vertical-align:top;white-space:nowrap}.lgtab td{padding:3px 0;word-break:break-word}
 
+.pin span b.pn{font-weight:800}.pin span b.pn.l{font-size:8.5px;letter-spacing:-.4px}
+
 </style>
 </head>
 <body>
@@ -941,7 +943,16 @@ const pad3=n=>String(n||0).padStart(3,'0');
 const issueNo=i=>!i?'':tradePfx(i.category)+'-'+pad3(i.number);
 const issueRef=(i,ctx)=>!i?'':issueNo(i); // display ref is always just "MEC-003" (no I<k>- tag; Fares). Multi-inspection views show the inspection name/row instead. Never used as a key – links/flags resolve by id
 const numCmp=(a,b)=>pfxRank(tradePfx(a.category))-pfxRank(tradePfx(b.category))||auditSeq(a.auditId)-auditSeq(b.auditId)||(a.number||0)-(b.number||0)||(a.createdAt||0)-(b.createdAt||0); // trade group, inspection, number
-const pinLabel=(i,multi)=>`<small>${tradePfx(i.category)}</small>${i.number}`; // pin head: trade prefix over the number
+/* pin label – ONE model for every pin (in-app drawing viewer, PDF drawing pages, per-issue crops, print view): trade prefix small on top, number bold below.
+   pinParts → plain text; pinLabel → HTML (only for HTML pins); pinFit → font sizes / positions that fit inside the pin head circle (canvas / PDF). */
+const pinParts=i=>({pfx:tradePfx((i||{}).category),num:String((i&&i.number)||'')});
+const pinText=i=>{const q=pinParts(i);return q.pfx+' '+q.num}; // plain text (titles, aria, CSV…)
+const pinLabel=(i,multi)=>{const q=pinParts(i);return`<small>${esc(q.pfx)}</small><b class="pn${q.num.length>2?' l':''}">${esc(q.num)}</b>`}; // HTML pins only – never pass to canvas / jsPDF
+/* fit a two-line label (pfx over num) inside a circle of radius r: measure(text,size,bold) → width. Returns sizes, baselines (relative to the circle centre) and the block box. */
+function pinFit(r,pfx,num,measure){const pad=.8,ri=r*pad,CAP=.72,GAP=.1,PR=.5; // cap height ≈ .72 em; prefix = 50 % of the number size
+ const wp=pfx?measure(pfx,1,true)*PR:0,wn=measure(num,1,true),W1=Math.max(wp,wn),H1=(pfx?CAP*PR+GAP:0)+CAP;
+ let n=Math.min(r*1.05,ri/Math.hypot(W1/2,H1/2));const p=n*PR,h=H1*n,w=W1*n;
+ return{numSize:n,pfxSize:p,pfxY:-h/2+CAP*p,numY:h/2,box:{w,h,x:-w/2,y:-h/2}}}
 const multiAudit=items=>new Set(items.map(i=>i.auditId)).size>1;
 
 async function seed(){if(S.settings.seeded)return;S.settings.seeded=true;
@@ -1360,12 +1371,14 @@ async function annotate(photoId){const p=await getPhoto(photoId);const base=awai
 
 /* ===== Drawing render with pins (for reports & crops) ===== */
 function drawPin(ctx,x,y,r,color,label,hl){ctx.save();ctx.beginPath();const cy=y-r*1.55;ctx.moveTo(x,y);ctx.bezierCurveTo(x-r*.35,y-r*.45,x-r,cy+r*.55,x-r,cy);ctx.arc(x,cy,r,Math.PI,0);ctx.bezierCurveTo(x+r,cy+r*.55,x+r*.35,y-r*.45,x,y);ctx.closePath();ctx.fillStyle=color;ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=r*.3;ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=Math.max(1.5,r*.14);ctx.strokeStyle=hl?'#facc15':'#fff';ctx.stroke();
- ctx.fillStyle='#fff';ctx.font=`bold ${r*(String(label).length>2?.8:1.05)}px Helvetica,Arial,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x,cy+r*.05);ctx.restore()}
+ let L=label&&typeof label==='object'?label:{pfx:'',num:String(label??'').replace(/<[^>]*>/g,'')}; // plain text only (strip any markup)
+ const F='Helvetica,Arial,sans-serif',meas=(t,s,b)=>{ctx.font=`${b?'bold ':''}${s}px ${F}`;return ctx.measureText(t).width},f=pinFit(r,L.pfx,L.num,meas);
+ ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='alphabetic';if(L.pfx){ctx.font=`bold ${f.pfxSize}px ${F}`;ctx.fillText(L.pfx,x,cy+f.pfxY)}ctx.font=`bold ${f.numSize}px ${F}`;ctx.fillText(L.num,x,cy+f.numY);ctx.restore()}
 async function drawingCanvas(d,items,{crop=null,maxW=2400}={}){const p=await getPhoto(d.imageId);const img=await loadImg(p.data);const W=img.naturalWidth,H=img.naturalHeight;let sx=0,sy=0,sw=W,sh=H;
  if(crop){const sz=Math.min(W,H,Math.max(W,H)*.25);sw=sh=sz;sx=clamp(crop.x*W-sz/2,0,W-sz);sy=clamp(crop.y*H-sz/2,0,H-sz)}
- const s=Math.min(1,maxW/Math.max(sw,sh));const c=document.createElement('canvas');c.width=Math.round(sw*s);c.height=Math.round(sh*s);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
- const r=Math.max(9,Math.max(c.width,c.height)*(crop?.065:.016));const mu=multiAudit(items.filter(i=>i.pin&&i.pin.drawingId===d.id));
- items.filter(i=>i.pin&&i.pin.drawingId===d.id).forEach(i=>{const px=(i.pin.x*W-sx)*s,py=(i.pin.y*H-sy)*s;if(px<0||py<0||px>c.width||py>c.height)return;drawPin(x,px,py,r,STATUS_COLOR[i.status],pinLabel(i,mu),false)});return c}
+ const s=Math.min(crop?4:1,maxW/Math.max(sw,sh));const c=document.createElement('canvas'); /* crops may upscale (sharp pin labels on small plans) */c.width=Math.round(sw*s);c.height=Math.round(sh*s);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+ const r=Math.max(7,Math.max(c.width,c.height)*(crop?.03:.016)); // crop: pin head ≈ 6 % of the crop widthconst mu=multiAudit(items.filter(i=>i.pin&&i.pin.drawingId===d.id));
+ items.filter(i=>i.pin&&i.pin.drawingId===d.id).forEach(i=>{const px=(i.pin.x*W-sx)*s,py=(i.pin.y*H-sy)*s;if(px<0||py<0||px>c.width||py>c.height)return;drawPin(x,px,py,r,STATUS_COLOR[i.status],pinParts(i),false)});return c}
 function clsRefresh(it,focus){const b=$('#cls-block');if(!b)return;b.innerHTML=clsFieldsHTML(it,projItems(it.projectId));if(focus){const x=b.querySelector(`[name=${focus}]`);if(x)x.focus()}}
 
 /* ===== Reports ===== */
